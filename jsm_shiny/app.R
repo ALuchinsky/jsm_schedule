@@ -78,7 +78,7 @@ ui <- fluidPage(
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
       column(3, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
-      column(3, selectInput("selected_day", "Select a day", choices = days)),
+      column(3, selectInput("selected_day", "Select a day", choices = days, multiple = TRUE)),
       column(3, 
              # selectInput("selected_type", "Select event type", choices = types, multiple = TRUE)
              pickerInput(
@@ -127,7 +127,7 @@ server <- function(input, output) {
   
   tv <- reactive({
     data_ <- DF %>% 
-      filter(day == selected_day()) %>% 
+      filter(day %in% selected_day()) %>% 
       filter(type %in% selected_type()) %>% 
       filter(grepl(tolower(title_search_pattern()), tolower(title)) )
     if(nrow(data_) == 0) {
