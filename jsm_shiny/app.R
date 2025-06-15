@@ -116,7 +116,7 @@ ui <- fluidPage(
         label = "Select event types:",
         choiceNames = sapply(types, get_event_style_string) %>% unname,
         choiceValues = types,
-        selected = c("Invited Paper Session", "Contributed Papers"),
+        selected = c("Invited Paper Session ", "Contributed Papers "),
         direction = "vertical",
         justified = TRUE,
         width = "100%",
@@ -149,6 +149,12 @@ server <- function(input, output) {
     selected_type(input$selected_type)
   })
   
+  event_select = reactiveVal(types)
+  observeEvent(input$event_select,{
+    cat(input$event_select,"\n")
+    event_select(input$event_select)
+  })
+  
   title_search_pattern = reactiveVal("fun")
   observeEvent(input$title_search_pattern, {
     cat(input$title_search_pattern)
@@ -163,7 +169,7 @@ server <- function(input, output) {
   tv <- reactive({
     data_ <- DF %>% 
       filter(day %in% selected_day()) %>% 
-      filter(type %in% selected_type()) %>% 
+      filter(type %in% event_select()) %>% 
       filter(grepl(tolower(title_search_pattern()), tolower(title)) )
     if(nrow(data_) == 0) {
       cat("Empty data table\n")
