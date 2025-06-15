@@ -63,7 +63,6 @@ ui <- fluidPage(
         overflow-y: scroll !important;
         overflow-x: hidden !important;
         overscroll-behavior: contain;
-        width: 95%
       }
     "))
     )),
@@ -106,7 +105,20 @@ ui <- fluidPage(
       column(3, textInput("title_search_pattern", "Filter:", ""))
     ),
 
-    timevisOutput("mytime"), # timevis output with ID "mytime"
+    fluidRow(
+      column(10, timevisOutput("mytime")), 
+      column(1, checkboxGroupButtons(
+        inputId = "event_select",
+        label = "Select event types:",
+        choices = types,
+        selected = c("Invited Paper Session", "Contributed Papers"),
+        direction = "vertical",
+        justified = TRUE,
+        width = "100%",
+        checkIcon = list(yes = icon("check")),
+        individual = TRUE
+      ))
+    )
 
     # Sidebar with a slider input for number of bins 
 )
@@ -137,6 +149,10 @@ server <- function(input, output) {
     cat(input$title_search_pattern)
     title_search_pattern(input$title_search_pattern)
   })
+  
+  
+  
+
   
   
   tv <- reactive({
