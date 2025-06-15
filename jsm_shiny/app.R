@@ -136,13 +136,13 @@ server <- function(input, output) {
     } else {
       data <- data_  %>% 
         separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
-        transmute(id = 1:nrow(.), start, end, title, type) %>% 
+        transmute(id = 1:nrow(.), day, start, end, title, type) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
       return(
         data.frame(
           id = data$id, 
-          start = paste("2025-08-01 ", data$start), 
-          end =  paste("2025-08-01 ", data$end), content = data$title,
+          start = paste(data$day, ",", data$start), 
+          end =  paste(data$day, data$end), content = data$title,
           style = data$type %>% sapply(get_event_style) %>% sapply(unlist)
         )
       )
