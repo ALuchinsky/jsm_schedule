@@ -117,9 +117,13 @@ server <- function(input, output) {
     selected_type(input$selected_type)
   })
   
+  title_search_pattern = reactiveVal("fun")
+  
   tv <- reactive({
-    data_ <- DF %>% filter(day == selected_day()) %>% 
-      filter(type %in% selected_type())
+    data_ <- DF %>% 
+      filter(day == selected_day()) %>% 
+      filter(type %in% selected_type()) %>% 
+      filter(grepl(tolower(title_search_pattern()), tolower(title)) )
     if(nrow(data_) == 0) {
       cat("Empty data table\n")
       return(empty_table)
