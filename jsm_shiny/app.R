@@ -80,8 +80,8 @@ ui <- fluidPage(
     # Application title
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
-      column(3, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
-      column(3, 
+      column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
+      column(4, 
              pickerInput(
                inputId = "selected_day", 
                label = "Select a day", 
@@ -93,20 +93,7 @@ ui <- fluidPage(
                )
                )
              ),
-      column(3, 
-             pickerInput(
-               inputId = "selected_type",
-               label = "Event Type",
-               choices = types,
-                choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
-               ),
-              selected = types,
-             multiple = TRUE,
-             options = pickerOptions(
-               actionsBox = TRUE, liveSearch = TRUE
-             ))
-      ),
-      column(3, textInput("title_search_pattern", "Filter:", ""))
+      column(4, textInput("title_search_pattern", "Filter:", ""))
     ),
 
     fluidRow(
@@ -143,12 +130,7 @@ server <- function(input, output) {
   })
   
 
-  selected_type = reactiveVal(c("Invited Paper Session "))
-  observeEvent(input$selected_type, {
-    cat(input$selected_type)
-    selected_type(input$selected_type)
-  })
-  
+
   event_select = reactiveVal(types)
   observeEvent(input$event_select,{
     cat(input$event_select,"\n")
