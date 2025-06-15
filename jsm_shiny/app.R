@@ -78,16 +78,28 @@ ui <- fluidPage(
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
       column(3, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
-      column(3, selectInput("selected_day", "Select a day", choices = days)),
       column(3, 
-             # selectInput("selected_type", "Select event type", choices = types, multiple = TRUE)
+             pickerInput(
+               inputId = "selected_day", 
+               label = "Select a day", 
+               choices = days, 
+               multiple = TRUE,
+               options = pickerOptions(
+                 actionsBox = TRUE, liveSearch = TRUE
+               )
+               )
+             ),
+      column(3, 
              pickerInput(
                inputId = "selected_type",
                label = "Event Type",
                choices = types,
                 choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
                ),
-             multiple = TRUE)
+             multiple = TRUE,
+             options = pickerOptions(
+               actionsBox = TRUE, liveSearch = TRUE
+             ))
       ),
       column(3, textInput("title_search_pattern", "Filter:", ""))
     ),
@@ -127,7 +139,7 @@ server <- function(input, output) {
   
   tv <- reactive({
     data_ <- DF %>% 
-      filter(day == selected_day()) %>% 
+      filter(day %in% selected_day()) %>% 
       filter(type %in% selected_type()) %>% 
       filter(grepl(tolower(title_search_pattern()), tolower(title)) )
     if(nrow(data_) == 0) {
@@ -136,13 +148,13 @@ server <- function(input, output) {
     } else {
       data <- data_  %>% 
         separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
-        transmute(id = 1:nrow(.), start, end, title, type) %>% 
+        transmute(id = 1:nrow(.), day, start, end, title, type) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
       return(
         data.frame(
           id = data$id, 
-          start = paste("2025-08-01 ", data$start), 
-          end =  paste("2025-08-01 ", data$end), content = data$title,
+          start = paste(data$day, ",", data$start), 
+          end =  paste(data$day, data$end), content = data$title,
           style = data$type %>% sapply(get_event_style) %>% sapply(unlist)
         )
       )
