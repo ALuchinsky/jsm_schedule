@@ -53,6 +53,10 @@ get_event_style <- function(event_type) {
   unname(style_map[event_type] %||% "background-color: #dddddd; color: black;")
 }
 
+get_event_style_string <- function(type) {
+  paste0("<span style=\"", get_event_style(type)[[1]], "\">", type, "</span>")
+}
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
@@ -63,7 +67,6 @@ ui <- fluidPage(
         overflow-y: scroll !important;
         overflow-x: hidden !important;
         overscroll-behavior: contain;
-        width: 95%
       }
     "))
     )),
@@ -77,8 +80,8 @@ ui <- fluidPage(
     # Application title
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
-      column(3, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
-      column(3, 
+      column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
+      column(4, 
              pickerInput(
                inputId = "selected_day", 
                label = "Select a day", 
@@ -90,23 +93,24 @@ ui <- fluidPage(
                )
                )
              ),
-      column(3, 
-             pickerInput(
-               inputId = "selected_type",
-               label = "Event Type",
-               choices = types,
-                choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
-               ),
-              selected = types,
-             multiple = TRUE,
-             options = pickerOptions(
-               actionsBox = TRUE, liveSearch = TRUE
-             ))
-      ),
-      column(3, textInput("title_search_pattern", "Filter:", ""))
+      column(4, textInput("title_search_pattern", "Filter:", ""))
     ),
 
-    timevisOutput("mytime"), # timevis output with ID "mytime"
+    fluidRow(
+      column(10, timevisOutput("mytime")), 
+      column(1, checkboxGroupButtons(
+        inputId = "event_select",
+        label = "Select event types:",
+        choiceNames = sapply(types, get_event_style_string) %>% unname,
+        choiceValues = types,
+        selected = c("Invited Paper Session ", "Contributed Papers "),
+        direction = "vertical",
+        justified = TRUE,
+        width = "100%",
+        checkIcon = list(yes = icon("check")),
+        individual = TRUE
+      ))
+    )
 
     # Sidebar with a slider input for number of bins 
 )
@@ -126,10 +130,11 @@ server <- function(input, output) {
   })
   
 
-  selected_type = reactiveVal(c("Invited Paper Session "))
-  observeEvent(input$selected_type, {
-    cat(input$selected_type)
-    selected_type(input$selected_type)
+
+  event_select = reactiveVal(types)
+  observeEvent(input$event_select,{
+    cat(input$event_select,"\n")
+    event_select(input$event_select)
   })
   
   title_search_pattern = reactiveVal("fun")
@@ -139,10 +144,14 @@ server <- function(input, output) {
   })
   
   
+  
+
+  
+  
   tv <- reactive({
     data_ <- DF %>% 
       filter(day %in% selected_day()) %>% 
-      filter(type %in% selected_type()) %>% 
+      filter(type %in% event_select()) %>% 
       filter(grepl(tolower(title_search_pattern()), tolower(title)) )
     if(nrow(data_) == 0) {
       cat("Empty data table\n")
