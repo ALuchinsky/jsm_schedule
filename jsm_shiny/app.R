@@ -13,6 +13,8 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(shinyWidgets))
+
 
 empty_table =         data.frame(
   id = "1",
@@ -22,7 +24,7 @@ empty_table =         data.frame(
 )
 
 
-DF <- read.csv("../time_table.csv")
+DF <- read.csv("time_table.csv")
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
 
@@ -53,7 +55,20 @@ get_event_style <- function(event_type) {
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-  tags$style(HTML("
+  
+  fluidPage(
+    tags$head(
+      tags$style(HTML("
+      html, body {
+        overflow-y: scroll !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+        width: 95%
+      }
+    "))
+    )),
+    
+    tags$style(HTML("
     .vis-timeline {
       font-size: 15px;
     }
@@ -64,7 +79,16 @@ ui <- fluidPage(
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
       column(4, selectInput("selected_day", "Select a day", choices = days)),
-      column(4, selectInput("selected_type", "Select event type", choices = types, multiple = TRUE))
+      column(4, 
+             # selectInput("selected_type", "Select event type", choices = types, multiple = TRUE)
+             pickerInput(
+               inputId = "selected_type",
+               label = "Event Type",
+               choices = types,
+                choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
+               ),
+             multiple = TRUE)
+      )
     ),
 
     timevisOutput("mytime"), # timevis output with ID "mytime"

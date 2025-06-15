@@ -33,6 +33,7 @@ str_strip <- function(s) {
 ```
 
 
+
 ```{r}
 DF = data.frame()
 pb <- progress::progress_bar$new(total = length(headerIDs))
@@ -53,59 +54,11 @@ for(iDay in seq_along(headerIDs)) {
 }
 ```
 
-```{r}
-write.csv(DF, "./time_table.csv", row.names = FALSE)
-```
-
 
 
 ```{r}
-
+write.csv(DF, "./jsm_shiny/time_table.csv", row.names = FALSE)
 ```
 
 
-
-```{r}
-```
-
-```{r}
-style <- "
-  .vis-timeline {
-    font-size: 13px;
-  }
-"
-```
-
-
-```{r}
-data_ <- DF %>% filter(day == unique(DF$day)[4]) %>% 
-  filter(type == "Contributed Papers ")
-  # filter(type == "Invited Paper Session ")
-data <- data_  %>% 
-  separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
-  transmute(id = 1:nrow(.), start, end, title) %>% 
-  mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = 30))) # Adjust width as needed
-
-
-
-tv = timevis(data.frame(
-  id = data$id, start = paste("2025-08-01 ", data$start), end =  paste("2025-08-01 ", data$end), content = data$title
-))
-tv <- tagList(tags$style(style), tv)
-
-# Print or display the timeline
-htmltools::html_print(tv)
-```
-
-
-```{r}
-data <- data.frame(
-  id      = 1:4,
-  content = c("Item one"  , "Item two"  ,"Ranged item", "Item four"),
-  start   = c("2016-01-10", "2016-01-11", "2016-01-20", "2016-02-14 15:00:00"),
-  end     = c(NA          ,           NA, "2016-02-04", NA)
-)
-
-timevis(data, height = "100px")
-```
 
