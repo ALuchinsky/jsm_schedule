@@ -53,6 +53,10 @@ get_event_style <- function(event_type) {
   unname(style_map[event_type] %||% "background-color: #dddddd; color: black;")
 }
 
+get_event_style_string <- function(type) {
+  paste0("<span style=\"", get_event_style(type)[[1]], "\">", type, "</span>")
+}
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
@@ -110,7 +114,8 @@ ui <- fluidPage(
       column(1, checkboxGroupButtons(
         inputId = "event_select",
         label = "Select event types:",
-        choices = types,
+        choiceNames = sapply(types, get_event_style_string) %>% unname,
+        choiceValues = types,
         selected = c("Invited Paper Session", "Contributed Papers"),
         direction = "vertical",
         justified = TRUE,
