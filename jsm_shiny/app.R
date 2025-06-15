@@ -78,16 +78,28 @@ ui <- fluidPage(
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
       column(3, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
-      column(3, selectInput("selected_day", "Select a day", choices = days, multiple = TRUE)),
       column(3, 
-             # selectInput("selected_type", "Select event type", choices = types, multiple = TRUE)
+             pickerInput(
+               inputId = "selected_day", 
+               label = "Select a day", 
+               choices = days, 
+               multiple = TRUE,
+               options = pickerOptions(
+                 actionsBox = TRUE, liveSearch = TRUE
+               )
+               )
+             ),
+      column(3, 
              pickerInput(
                inputId = "selected_type",
                label = "Event Type",
                choices = types,
                 choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
                ),
-             multiple = TRUE)
+             multiple = TRUE,
+             options = pickerOptions(
+               actionsBox = TRUE, liveSearch = TRUE
+             ))
       ),
       column(3, textInput("title_search_pattern", "Filter:", ""))
     ),
