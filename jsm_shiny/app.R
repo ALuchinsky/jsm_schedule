@@ -83,6 +83,7 @@ ui <- fluidPage(
                inputId = "selected_day", 
                label = "Select a day", 
                choices = days, 
+               selected = days[1], 
                multiple = TRUE,
                options = pickerOptions(
                  actionsBox = TRUE, liveSearch = TRUE
@@ -96,6 +97,7 @@ ui <- fluidPage(
                choices = types,
                 choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
                ),
+              selected = types,
              multiple = TRUE,
              options = pickerOptions(
                actionsBox = TRUE, liveSearch = TRUE
@@ -124,7 +126,7 @@ server <- function(input, output) {
   })
   
 
-  selected_type = reactiveVal("Invited Paper Session ")
+  selected_type = reactiveVal(c("Invited Paper Session "))
   observeEvent(input$selected_type, {
     cat(input$selected_type)
     selected_type(input$selected_type)
