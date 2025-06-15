@@ -77,9 +77,9 @@ ui <- fluidPage(
     # Application title
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
-      column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
-      column(4, selectInput("selected_day", "Select a day", choices = days)),
-      column(4, 
+      column(3, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
+      column(3, selectInput("selected_day", "Select a day", choices = days)),
+      column(3, 
              # selectInput("selected_type", "Select event type", choices = types, multiple = TRUE)
              pickerInput(
                inputId = "selected_type",
@@ -88,7 +88,8 @@ ui <- fluidPage(
                 choicesOpt = list(style = types %>% sapply(get_event_style) %>% sapply(unlist)
                ),
              multiple = TRUE)
-      )
+      ),
+      column(3, textInput("title_search_pattern", "Filter:", ""))
     ),
 
     timevisOutput("mytime"), # timevis output with ID "mytime"
@@ -117,9 +118,18 @@ server <- function(input, output) {
     selected_type(input$selected_type)
   })
   
+  title_search_pattern = reactiveVal("fun")
+  observeEvent(input$title_search_pattern, {
+    cat(input$title_search_pattern)
+    title_search_pattern(input$title_search_pattern)
+  })
+  
+  
   tv <- reactive({
-    data_ <- DF %>% filter(day == selected_day()) %>% 
-      filter(type %in% selected_type())
+    data_ <- DF %>% 
+      filter(day == selected_day()) %>% 
+      filter(type %in% selected_type()) %>% 
+      filter(grepl(tolower(title_search_pattern()), tolower(title)) )
     if(nrow(data_) == 0) {
       cat("Empty data table\n")
       return(empty_table)
