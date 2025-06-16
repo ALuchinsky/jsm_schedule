@@ -14,12 +14,12 @@ suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(shinyWidgets))
-
+suppressPackageStartupMessages(library(lubridate))
 
 empty_table =         data.frame(
   id = "1",
-  start = "2025-08-01 10AM",
-  end =  "2025-08-01 11AM",
+  start = "2025-08-01T10:00:00",
+  end =  "2025-08-01T11:00:00",
   content = "No events"
 )
 
@@ -57,10 +57,23 @@ get_event_style_string <- function(type) {
   paste0("<span style=\"", get_event_style(type)[[1]], "\">", type, "</span>")
 }
 
+parse_date_string <- function(raw_start) {
+  # Step 1: Remove weekday name
+  # This removes everything before the first comma and the comma itself
+  cleaned <- str_trim(str_remove(raw_start, "^[^,]+,\\s*"))  
+  # cleaned is now: "August 4, 2025 , 7:00 AM"
+  
+  # Step 2: Remove any extra commas
+  cleaned <- str_replace_all(cleaned, ",", "")  
+  # cleaned is now: "August 4 2025 7:00 AM"
+  
+  # Step 3: Parse using mdy_hm (month-day-year hour-minute) or mdy_hms if seconds included
+  parsed_date <- mdy_hm(cleaned)
+  return(parsed_date)
+}
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-  
-  fluidPage(
     tags$head(
       tags$style(HTML("
       html, body {
@@ -68,14 +81,35 @@ ui <- fluidPage(
         overflow-x: hidden !important;
         overscroll-behavior: contain;
       }
-    "))
-    )),
-    
-    tags$style(HTML("
+    ")),
+      
+      tags$script(HTML("
+      Shiny.addCustomMessageHandler('bindDoubleClick', function(id) {
+        console.log('Binding double-click to', id);
+        const container = document.getElementById(id);
+        if (!container || !container.timeline) {
+          console.warn('Timeline not found for', id);
+          return;
+        }
+
+        // Prevent duplicate bindings
+        if (!container._dblclickBound) {
+          container.addEventListener('dblclick', function(event) {
+            const props = container.timeline.getEventProperties(event);
+            console.log('Double-click props:', props);
+            Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
+          });
+          container._dblclickBound = true;
+        }
+      });
+    ")),
+      
+      tags$style(HTML("
     .vis-timeline {
       font-size: 15px;
-    }
-  ")),
+    }"
+    ))
+  ), # eng of tags$head
 
     # Application title
     # titlePanel("Old Faithful Geyser Data"),
@@ -94,7 +128,7 @@ ui <- fluidPage(
                )
              ),
       column(4, textInput("title_search_pattern", "Filter:", ""))
-    ),
+    ), # end of first row,
 
     fluidRow(
       column(10, timevisOutput("mytime")), 
@@ -110,13 +144,13 @@ ui <- fluidPage(
         checkIcon = list(yes = icon("check")),
         individual = TRUE
       ))
-    )
+    ) # end of 2nd row
 
     # Sidebar with a slider input for number of bins 
-)
+) # end of ui fluid page
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output, session) {
   wrap_width <- reactiveVal(30) # Initial wrap width
   # wrap_width = 30
   observeEvent(input$wrap_width, {
@@ -142,12 +176,7 @@ server <- function(input, output) {
     cat(input$title_search_pattern)
     title_search_pattern(input$title_search_pattern)
   })
-  
-  
-  
 
-  
-  
   tv <- reactive({
     data_ <- DF %>% 
       filter(day %in% selected_day()) %>% 
@@ -162,19 +191,53 @@ server <- function(input, output) {
         mutate(popup = paste0(title, "|", type, "| section: ", id)) %>% 
         transmute(id = 1:nrow(.), day, start, end, title, type, popup) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
-      return(
-        data.frame(
-          id = data$id, 
-          start = paste(data$day, ",", data$start), 
-          end =  paste(data$day, data$end), content = data$title,
-          style = data$type %>% sapply(get_event_style) %>% sapply(unlist),
-          title = data$popup
-        )
+      final_data <- data.frame(
+        id = data$id, 
+        start = format(as.POSIXct(paste(data$day, data$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+        end   = format(as.POSIXct(paste(data$day, data$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+        content = data$title,
+        style = data$type %>% sapply(get_event_style) %>% sapply(unlist),
+        title = data$popup
       )
+      bad_rows <- is.na(final_data$start) | is.na(final_data$end)
+      if (any(bad_rows)) {
+        print("Bad rows found:")
+        print(data[bad_rows, ])
+      }
+      return(final_data)
     }
   })
+  
+  
 
-  output$mytime = renderTimevis(timevis(tv()))
+  output$mytime <- renderTimevis({
+    timevis(tv())%>% onRender("
+      function(el, x) {
+        document.getElementById(el.id).timeline = this.timeline;
+        setTimeout(function() {
+          Shiny.setInputValue('timeline_ready', el.id);
+        }, 0);
+      }
+    ")
+  })
+      
+  observeEvent(input$timeline_ready, {
+    session$sendCustomMessage("bindDoubleClick", input$timeline_ready)
+  })
+  
+  observeEvent(input$mytime_doubleclick, {
+    dbl <- input$mytime_doubleclick
+    print("Double-click detected")  # For R console
+    showModal(modalDialog(
+      title = "Timeline Double-Click",
+      paste("Clicked type:", dbl$what),
+      paste("Time:", dbl$time),
+      paste("Item ID:", dbl$item),
+      easyClose = TRUE
+    ))
+  })
+  
+  
 }
 
 # Run the application 
