@@ -15,6 +15,7 @@ suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(lubridate))
+suppressPackageStartupMessages(library(htmlwidgets))
 
 empty_table =         data.frame(
   id = "1",
