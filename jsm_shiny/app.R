@@ -29,6 +29,8 @@ DF <- read.csv("time_table.csv")
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
 
+selected_events <- c()
+
 get_event_style <- function(event_type) {
   style_map <- list(
     "Invited Paper Session " = "background-color: #d62728; color: white; font-weight: bold;",
@@ -187,10 +189,12 @@ server <- function(input, output, session) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
+      cat("selected_events = ", selected_events,"\n")
       data <- data_  %>% 
         separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
         mutate(popup = paste0(title, "|", type, "| section: ", id)) %>% 
-        transmute(id = 1:nrow(.), day, start, end, title, type, popup) %>% 
+        transmute(id, day, start, end, title, type, popup) %>% 
+        mutate(title = ifelse(id %in% selected_events, toupper(title), title)) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
       final_data <- data.frame(
         id = data$id, 
@@ -228,14 +232,18 @@ server <- function(input, output, session) {
   
   observeEvent(input$mytime_doubleclick, {
     dbl <- input$mytime_doubleclick
-    print("Double-click detected")  # For R console
-    showModal(modalDialog(
-      title = "Timeline Double-Click",
-      paste("Clicked type:", dbl$what),
-      paste("Time:", dbl$time),
-      paste("Item ID:", dbl$item),
-      easyClose = TRUE
-    ))
+    cat("Double clicked in id=", dbl$item,"\n")
+    selected_events <<- append(selected_events, dbl$item)
+    cat("selected events: ", selected_events, "\n")
+    session$reload()
+    # print("Double-click detected")  # For R console
+    # showModal(modalDialog(
+    #   title = "Timeline Double-Click",
+    #   paste("Clicked type:", dbl$what),
+    #   paste("Time:", dbl$time),
+    #   paste("Item ID:", dbl$item),
+    #   easyClose = TRUE
+    # ))
   })
   
   
