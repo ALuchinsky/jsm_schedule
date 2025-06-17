@@ -110,6 +110,13 @@ ui <- fluidPage(
     # Application title
     # titlePanel("Old Faithful Geyser Data"),
     fluidRow(
+      column(1, actionBttn("reset_btn", "Reset")),
+      column(1),
+      column(1, actionBttn("info_btn", "Info")),
+      column(1),
+      column(1, actionBttn("redraw_btn", "Redraw")),
+    ),
+    fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
       column(4, 
              pickerInput(
@@ -274,6 +281,24 @@ server <- function(input, output, session) {
       cat("shaded_events = ", shaded_events,"\n")
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
+  })
+  
+  observeEvent(input$info_btn,{
+    cat("INFO: \n")
+    cat(" selected_ids = ", selected_ids(),"\n")
+    cat(" shaded_events = ", shaded_events, "\n")
+  })
+  
+  observeEvent(input$reset_btn, {
+    cat("Reset button clicked\n")
+    selected_ids()
+    shaded_events <<- c()
+    redraw_trigger(redraw_trigger() + 1)  # Force update
+  })
+  
+  observeEvent(input$redraw_btn, {
+    cat("Redraw #", redraw_trigger(), "\n")
+    redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 }
 
