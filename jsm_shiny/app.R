@@ -28,6 +28,7 @@ empty_table =         data.frame(
 DF <- read.csv("time_table.csv")
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
+shaded_events <- c(27)
 
 get_event_style <- function(event_type) {
   style_map <- list(
@@ -195,6 +196,8 @@ server <- function(input, output, session) {
         content = data$title,
         style = data$type %>% sapply(get_event_style) %>% sapply(unlist),
         title = data$popup
+      ) %>% mutate(
+        style = ifelse(id %in% shaded_events, "background-color: #f0f0f0; color: #888888;", style)
       )
       bad_rows <- is.na(final_data$start) | is.na(final_data$end)
       if (any(bad_rows)) {
@@ -239,7 +242,7 @@ server <- function(input, output, session) {
   observeEvent(input$timeline_doubleclick, {
     clicked_id <- input$timeline_doubleclick$item
     cat("item ", clicked_id, " is clicked\n")
-    if (!is.null(clicked_id)) {
+    if (!is.null(clicked_id) & !(clicked_id %in% shaded_events)) {
       current <- selected_ids()
       if (!(clicked_id %in% current)) {
         selected_ids(c(current, clicked_id))  # Add to selection
