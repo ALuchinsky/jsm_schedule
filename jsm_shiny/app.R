@@ -181,10 +181,12 @@ server <- function(input, output, session) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
+      cat("selected_ids = ", selected_ids(), "\n")
       data <- data_  %>% 
         separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
         mutate(popup = paste0(title, "|", type, "| section: ", id)) %>% 
         transmute(id = 1:nrow(.), day, start, end, title, type, popup) %>% 
+        mutate(title = ifelse(id %in% selected_ids(), toupper(title), title)) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
       final_data <- data.frame(
         id = data$id, 
