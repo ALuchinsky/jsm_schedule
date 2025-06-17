@@ -29,8 +29,6 @@ DF <- read.csv("time_table.csv")
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
 
-selected_events <- c()
-
 get_event_style <- function(event_type) {
   style_map <- list(
     "Invited Paper Session " = "background-color: #d62728; color: white; font-weight: bold;",
@@ -88,22 +86,14 @@ ui <- fluidPage(
       
       tags$script(HTML("
       Shiny.addCustomMessageHandler('bindDoubleClick', function(id) {
-        console.log('Binding double-click to', id);
-        const container = document.getElementById(id);
-        if (!container || !container.timeline) {
-          console.warn('Timeline not found for', id);
-          return;
-        }
+        const el = document.getElementById(id);
+        if (!el || !el.timeline) return;
+        if (el._dblclickBound) return;
+        el._dblclickBound = true;
 
-        // Prevent duplicate bindings
-        if (!container._dblclickBound) {
-          container.addEventListener('dblclick', function(event) {
-            const props = container.timeline.getEventProperties(event);
-            console.log('Double-click props:', props);
-            Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
-          });
-          container._dblclickBound = true;
-        }
+        el.timeline.on('doubleClick', function (props) {
+          Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
+        });
       });
     ")),
       
@@ -134,7 +124,7 @@ ui <- fluidPage(
     ), # end of first row,
 
     fluidRow(
-      column(10, timevisOutput("mytime")), 
+      column(10, uiOutput("timeline_ui")), 
       column(1, checkboxGroupButtons(
         inputId = "event_select",
         label = "Select event types:",
@@ -166,7 +156,9 @@ server <- function(input, output, session) {
     selected_day(input$selected_day)
   })
   
-
+  selected_ids <- reactiveVal(c())  # Store clicked item IDs
+  redraw_trigger <- reactiveVal(0)  # Force UI re-render
+  
 
   event_select = reactiveVal(types)
   observeEvent(input$event_select,{
@@ -180,7 +172,7 @@ server <- function(input, output, session) {
     title_search_pattern(input$title_search_pattern)
   })
 
-  tv <- reactive({
+  tv_data <- reactive({
     data_ <- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
@@ -189,12 +181,10 @@ server <- function(input, output, session) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
-      cat("selected_events = ", selected_events,"\n")
       data <- data_  %>% 
         separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
         mutate(popup = paste0(title, "|", type, "| section: ", id)) %>% 
-        transmute(id, day, start, end, title, type, popup) %>% 
-        mutate(title = ifelse(id %in% selected_events, toupper(title), title)) %>% 
+        transmute(id = 1:nrow(.), day, start, end, title, type, popup) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
       final_data <- data.frame(
         id = data$id, 
@@ -215,8 +205,18 @@ server <- function(input, output, session) {
   
   
 
-  output$mytime <- renderTimevis({
-    timevis(tv())%>% onRender("
+  output$timeline_ui <- renderUI({
+    redraw_trigger()  # trigger timevis redraw when updated
+    tagList(
+      timevisOutput("timeline"),
+      tags$script("setTimeout(function() {
+        Shiny.setInputValue('bind_timevis', Math.random());
+      }, 0);")
+    )
+  })
+  
+  output$timeline <- renderTimevis({
+    timevis(tv_data()) %>% onRender("
       function(el, x) {
         document.getElementById(el.id).timeline = this.timeline;
         setTimeout(function() {
@@ -225,28 +225,30 @@ server <- function(input, output, session) {
       }
     ")
   })
-      
+  
   observeEvent(input$timeline_ready, {
     session$sendCustomMessage("bindDoubleClick", input$timeline_ready)
   })
   
-  observeEvent(input$mytime_doubleclick, {
-    dbl <- input$mytime_doubleclick
-    cat("Double clicked in id=", dbl$item,"\n")
-    selected_events <<- append(selected_events, dbl$item)
-    cat("selected events: ", selected_events, "\n")
-    session$reload()
-    # print("Double-click detected")  # For R console
-    # showModal(modalDialog(
-    #   title = "Timeline Double-Click",
-    #   paste("Clicked type:", dbl$what),
-    #   paste("Time:", dbl$time),
-    #   paste("Item ID:", dbl$item),
-    #   easyClose = TRUE
-    # ))
+  observeEvent(input$bind_timevis, {
+    session$sendCustomMessage("bindDoubleClick", "timeline")
   })
   
-  
+  observeEvent(input$timeline_doubleclick, {
+    clicked_id <- input$timeline_doubleclick$item
+    cat("item ", clicked_id, " is clicked\n")
+    if (!is.null(clicked_id)) {
+      current <- selected_ids()
+      if (!(clicked_id %in% current)) {
+        selected_ids(c(current, clicked_id))  # Add to selection
+        cat("Adding ", clicked_id, " selected_ids=", selected_ids(),"\n")
+      } else {
+        selected_ids(current[current != clicked_id])  # Add to selection
+        cat("Removing ", clicked_id, " selected_ids=", selected_ids(),"\n")
+      }
+      redraw_trigger(redraw_trigger() + 1)  # Force update
+    }
+  })
 }
 
 # Run the application 
