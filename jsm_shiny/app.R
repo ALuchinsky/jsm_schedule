@@ -74,6 +74,8 @@ parse_date_string <- function(raw_start) {
   return(parsed_date)
 }
 
+to_POSIX_date <- function(day, time) as.POSIXct(paste(day, time), format = "%A, %B %d, %Y %I:%M %p") 
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     tags$head(
@@ -174,7 +176,7 @@ server <- function(input, output, session) {
   })
 
   tv_data <- reactive({
-    data_ <- DF %>% 
+    data_ <<- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
       filter(grepl(tolower(title_search_pattern()), tolower(title)) )
@@ -242,6 +244,7 @@ server <- function(input, output, session) {
   observeEvent(input$timeline_doubleclick, {
     clicked_id <- input$timeline_doubleclick$item
     cat("item ", clicked_id, " is clicked\n")
+    cat("data$id[1] = ", data$id[1],"\n")
     if (!is.null(clicked_id) & !(clicked_id %in% shaded_events)) {
       current <- selected_ids()
       if (!(clicked_id %in% current)) {
@@ -251,6 +254,24 @@ server <- function(input, output, session) {
         selected_ids(current[current != clicked_id])  # Add to selection
         cat("Removing ", clicked_id, " selected_ids=", selected_ids(),"\n")
       }
+      # updating shaded
+      shaded_events <<- c()
+      for(sid in selected_ids()) {
+        sid_data <- data[data$id == sid,]
+        sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
+        sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
+        for(ev_id in data$id) {
+          if(ev_id == sid) next;
+          ev_data = data[data$id == ev_id,]
+          ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
+          ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
+          if(is.na(ev_start) || is.na(ev_end)) next;
+          if( !( ev_end < sid_start || ev_start>sid_end)) {
+            shaded_events <<- append(shaded_events, ev_id)
+          }
+        }
+      }
+      cat("shaded_events = ", shaded_events,"\n")
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
   })
