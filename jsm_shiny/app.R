@@ -291,7 +291,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$reset_btn, {
     cat("Reset button clicked\n")
-    selected_ids()
+    selected_ids(c())
     shaded_events <<- c()
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
