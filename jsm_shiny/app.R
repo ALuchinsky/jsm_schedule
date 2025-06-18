@@ -29,6 +29,7 @@ DF <- read.csv("time_table.csv")
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
 shaded_events <- c(27)
+seleted_sections <<- c()
 
 get_event_style <- function(event_type) {
   style_map <- list(
@@ -75,6 +76,8 @@ parse_date_string <- function(raw_start) {
 }
 
 to_POSIX_date <- function(day, time) as.POSIXct(paste(day, time), format = "%A, %B %d, %Y %I:%M %p") 
+
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -192,10 +195,10 @@ server <- function(input, output, session) {
       return(empty_table)
     } else {
       cat("selected_ids = ", selected_ids(), "\n")
-      data <- data_  %>% 
+      data <<- data_  %>% 
         separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
-        mutate(popup = paste0(title, "|", type, "| section: ", id)) %>% 
-        transmute(id = 1:nrow(.), day, start, end, title, type, popup) %>% 
+        mutate(section = id, popup = paste0(title, "|", type, "| section: ", id)) %>% 
+        transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
         mutate(title = ifelse(id %in% selected_ids(), toupper(title), title)) %>% 
         mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
       final_data <- data.frame(
@@ -253,13 +256,17 @@ server <- function(input, output, session) {
     cat("item ", clicked_id, " is clicked\n")
     cat("data$id[1] = ", data$id[1],"\n")
     if (!is.null(clicked_id) & !(clicked_id %in% shaded_events)) {
+      clicked_section <- data[data$id == clicked_id,]$section
+      cat("clicked_section = ", clicked_section, "\n")
       current <- selected_ids()
-      if (!(clicked_id %in% current)) {
-        selected_ids(c(current, clicked_id))  # Add to selection
-        cat("Adding ", clicked_id, " selected_ids=", selected_ids(),"\n")
+      if (!(clicked_section %in% seleted_sections)) {
+        # selected_ids(c(current, clicked_id))  # Add to selection
+        seleted_sections <<- c(seleted_sections, clicked_section)
+        cat("Adding section ", clicked_section, " seleted_sections=", seleted_sections,"\n")
       } else {
         selected_ids(current[current != clicked_id])  # Add to selection
-        cat("Removing ", clicked_id, " selected_ids=", selected_ids(),"\n")
+        seleted_sections <<- seleted_sections[seleted_sections != clicked_section]
+        cat("Removing section ", clicked_section, " seleted_sections=", seleted_sections,"\n")
       }
       # updating shaded
       shaded_events <<- c()
@@ -285,8 +292,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$info_btn,{
     cat("INFO: \n")
+    str(data)
     cat(" selected_ids = ", selected_ids(),"\n")
     cat(" shaded_events = ", shaded_events, "\n")
+    cat(" seleted_sections=", seleted_sections, "\n")
   })
   
   observeEvent(input$reset_btn, {
