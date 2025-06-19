@@ -272,8 +272,11 @@ server <- function(input, output, session) {
     cat("item ", clicked_id, " is clicked\n")
     data_var <- data()
     cat("data_var$id[1] = ", data_var$id[1],"\n")
-    if (!is.null(clicked_id) & !(clicked_id %in% shaded_events)) {
+    if (!is.null(clicked_id)) {
       clicked_section <- data_var[data_var$id == clicked_id,]$section
+      if(clicked_section %in% shaded_events) {
+        return()
+      }
       cat("clicked_section = ", clicked_section, "\n")
       if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
