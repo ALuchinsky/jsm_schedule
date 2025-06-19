@@ -28,8 +28,8 @@ empty_table =         data.frame(
 DF <- read.csv("time_table.csv")
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
-shaded_events <- c(27)
-seleted_sections <<- c()
+shaded_events <- c()
+
 
 get_event_style <- function(event_type) {
   style_map <- list(
@@ -170,6 +170,7 @@ server <- function(input, output, session) {
   })
   
   selected_ids <- reactiveVal(c())  # Store clicked item IDs
+  selected_sections <- reactiveVal( c())
   redraw_trigger <- reactiveVal(0)  # Force UI re-render
   
 
@@ -259,15 +260,16 @@ server <- function(input, output, session) {
       clicked_section <- data[data$id == clicked_id,]$section
       cat("clicked_section = ", clicked_section, "\n")
       current <- selected_ids()
-      if (!(clicked_section %in% seleted_sections)) {
+      if (!(clicked_section %in% selected_sections())) {
         # selected_ids(c(current, clicked_id))  # Add to selection
-        seleted_sections <<- c(seleted_sections, clicked_section)
-        cat("Adding section ", clicked_section, " seleted_sections=", seleted_sections,"\n")
+        selected_sections( c(selected_sections(), clicked_section))
+        cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       } else {
         selected_ids(current[current != clicked_id])  # Add to selection
-        seleted_sections <<- seleted_sections[seleted_sections != clicked_section]
-        cat("Removing section ", clicked_section, " seleted_sections=", seleted_sections,"\n")
+        selected_sections( selected_sections()[selected_sections() != clicked_section])
+        cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       }
+      selected_ids( data[data$section %in% selected_sections(),]$id)
       # updating shaded
       shaded_events <<- c()
       for(sid in selected_ids()) {
@@ -295,13 +297,14 @@ server <- function(input, output, session) {
     str(data)
     cat(" selected_ids = ", selected_ids(),"\n")
     cat(" shaded_events = ", shaded_events, "\n")
-    cat(" seleted_sections=", seleted_sections, "\n")
+    cat(" selected_sections=", selected_sections(), "\n")
   })
   
   observeEvent(input$reset_btn, {
     cat("Reset button clicked\n")
     selected_ids(c())
     shaded_events <<- c()
+    selected_sections(c())
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
   
