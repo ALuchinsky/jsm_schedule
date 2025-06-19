@@ -77,7 +77,11 @@ parse_date_string <- function(raw_start) {
 
 to_POSIX_date <- function(day, time) as.POSIXct(paste(day, time), format = "%A, %B %d, %Y %I:%M %p") 
 
-
+writeClipboard <- function(v) {
+  clip <- pipe("pbcopy", "w")
+  writeLines(paste(v), clip)
+  close(clip)
+}
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -321,6 +325,7 @@ server <- function(input, output, session) {
     str(data())
     cat(" shaded_events = ", shaded_events, "\n")
     cat(" selected_sections=", selected_sections(), "\n")
+    writeClipboard(selected_sections())
   })
   
   observeEvent(input$reset_btn, {
