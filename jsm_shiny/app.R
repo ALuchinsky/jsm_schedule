@@ -343,6 +343,18 @@ server <- function(input, output, session) {
     cat("Redraw #", redraw_trigger(), "\n")
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
+ 
+  observeEvent(input$save_btn,{
+    cat("Save button pushed\n")
+    showModal(modalDialog(
+      title = "Save Schdule",
+      tags$p("Session IDs of your schedules events are:"),
+      tags$p(paste(selected_sections(), collapse = ",")),
+      tags$p("You can copy that to the clippbard and save it for later"),
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
+  }) 
 }
 
 # Run the application 
