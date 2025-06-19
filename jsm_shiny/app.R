@@ -355,6 +355,23 @@ server <- function(input, output, session) {
       footer = modalButton("Close")
     ))
   }) 
+  
+  observeEvent(input$load_btn, {
+    cat("Load button pushed\n")
+    showModal(modalDialog(
+      title = "Load Data",
+      tags$p("Paste comma-separates section numbers"),
+      textInput("loaded_sections", "Sections:"),
+      easyClose = TRUE,
+      footer = actionBttn("load_submit", "OK")
+    ))
+  })
+  
+  observeEvent(input$load_submit, {
+    sects <- unname(sapply(strsplit(input$loaded_sections, ",")[[1]], as.integer))
+    cat("Submitted: ", sects)
+    
+  })
 }
 
 # Run the application 
