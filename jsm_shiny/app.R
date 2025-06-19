@@ -275,6 +275,7 @@ server <- function(input, output, session) {
     if (!is.null(clicked_id) & !(clicked_id %in% shaded_events)) {
       clicked_section <- data_var[data_var$id == clicked_id,]$section
       cat("clicked_section = ", clicked_section, "\n")
+      if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
         selected_sections( c(selected_sections(), clicked_section))
         cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
@@ -289,12 +290,19 @@ server <- function(input, output, session) {
         sid_data <- data_var[data_var$section == s_section,]
         sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
         sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
+        if (length(sid_start) == 0 || is.na(sid_start) ||
+            length(sid_end)   == 0 || is.na(sid_end)) {
+          next
+        }
         for(ev_section in data_var$section) {
           if(ev_section == s_section) next;
           ev_data = data_var[data_var$section == ev_section,]
           ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
           ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
-          if(is.na(ev_start) || is.na(ev_end)) next;
+          if (length(ev_start) == 0 || is.na(ev_start) ||
+              length(ev_end)   == 0 || is.na(ev_end)) {
+            next
+          }
           if( !( ev_end <= sid_start || ev_start >= sid_end)) {
             shaded_events <<- append(shaded_events, ev_section)
           }
