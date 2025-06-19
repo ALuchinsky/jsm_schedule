@@ -121,7 +121,11 @@ ui <- fluidPage(
       column(1),
       column(1, actionBttn("info_btn", "Info")),
       column(1),
-      column(1, actionBttn("redraw_btn", "Redraw"))
+      column(1, actionBttn("redraw_btn", "Redraw")),
+      column(1),
+      column(1, actionBttn("save_btn", "Save Schedule")),
+      column(1),
+      column(1, actionBttn("load_btn", "Load Schedule"))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
