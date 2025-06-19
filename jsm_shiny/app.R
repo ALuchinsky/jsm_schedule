@@ -117,7 +117,7 @@ ui <- fluidPage(
       column(1),
       column(1, actionBttn("info_btn", "Info")),
       column(1),
-      column(1, actionBttn("redraw_btn", "Redraw")),
+      column(1, actionBttn("redraw_btn", "Redraw"))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
@@ -169,7 +169,6 @@ server <- function(input, output, session) {
     selected_day(input$selected_day)
   })
   
-  selected_ids <- reactiveVal(c())  # Store clicked item IDs
   selected_sections <- reactiveVal( c())
   redraw_trigger <- reactiveVal(0)  # Force UI re-render
   
@@ -195,12 +194,13 @@ server <- function(input, output, session) {
     if(nrow(data_) == 0) {
       return( data_)
     }
-    cat("selected_ids = ", selected_ids(), "\n")
+    selected_ids <- data_[data_$id %in% selected_sections(),]$id
+    cat("selected_ids = ", selected_ids, "\n")
     data_var <- data_  %>% 
       separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
       mutate(section = id, popup = paste0(title, "|", type, "| section: ", id)) %>% 
       transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
-      mutate(title = ifelse(id %in% selected_ids(), toupper(title), title)) %>% 
+      mutate(title = ifelse(section %in% selected_ids, toupper(title), title)) %>% 
       mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
     
     print("data(): data_var")
@@ -216,16 +216,21 @@ server <- function(input, output, session) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
+        shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
         final_data <- data.frame(
-        id = data_var$id, 
-        start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
-        end   = format(as.POSIXct(paste(data_var$day, data_var$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
-        content = data_var$title,
-        style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
-        title = data_var$popup
+          id = data_var$id, 
+          start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+          end   = format(as.POSIXct(paste(data_var$day, data_var$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+          content = data_var$title,
+          style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
+          title = data_var$popup
       ) %>% mutate(
-        style = ifelse(id %in% shaded_events, "background-color: #f0f0f0; color: #888888;", style)
+        style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
       )
+        print("tv_data: shaded_events")
+        print(shaded_events)
+        print("End of tv_data")
+        
       return(final_data)
     }
   })
@@ -243,6 +248,7 @@ server <- function(input, output, session) {
   })
   
   output$timeline <- renderTimevis({
+    print("renderTimeviz: tv_data()")
     timevis(tv_data()) %>% onRender("
       function(el, x) {
         document.getElementById(el.id).timeline = this.timeline;
@@ -269,31 +275,28 @@ server <- function(input, output, session) {
     if (!is.null(clicked_id) & !(clicked_id %in% shaded_events)) {
       clicked_section <- data_var[data_var$id == clicked_id,]$section
       cat("clicked_section = ", clicked_section, "\n")
-      current <- selected_ids()
       if (!(clicked_section %in% selected_sections())) {
-        # selected_ids(c(current, clicked_id))  # Add to selection
         selected_sections( c(selected_sections(), clicked_section))
         cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       } else {
-        selected_ids(current[current != clicked_id])  # Add to selection
         selected_sections( selected_sections()[selected_sections() != clicked_section])
         cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       }
-      selected_ids( data_var[data_var$section %in% selected_sections(),]$id)
       # updating shaded
       shaded_events <<- c()
-      for(sid in selected_ids()) {
-        sid_data <- data_var[data_var$id == sid,]
+      # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
+      for(s_section in selected_sections()) {
+        sid_data <- data_var[data_var$section == s_section,]
         sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
         sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
-        for(ev_id in data_var$id) {
-          if(ev_id == sid) next;
-          ev_data = data_var[data_var$id == ev_id,]
+        for(ev_section in data_var$section) {
+          if(ev_section == s_section) next;
+          ev_data = data_var[data_var$section == ev_section,]
           ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
           ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
           if(is.na(ev_start) || is.na(ev_end)) next;
-          if( !( ev_end < sid_start || ev_start>sid_end)) {
-            shaded_events <<- append(shaded_events, ev_id)
+          if( !( ev_end <= sid_start || ev_start >= sid_end)) {
+            shaded_events <<- append(shaded_events, ev_section)
           }
         }
       }
@@ -305,14 +308,12 @@ server <- function(input, output, session) {
   observeEvent(input$info_btn,{
     cat("INFO: \n")
     str(data())
-    cat(" selected_ids = ", selected_ids(),"\n")
     cat(" shaded_events = ", shaded_events, "\n")
     cat(" selected_sections=", selected_sections(), "\n")
   })
   
   observeEvent(input$reset_btn, {
     cat("Reset button clicked\n")
-    selected_ids(c())
     shaded_events <<- c()
     selected_sections(c())
     redraw_trigger(redraw_trigger() + 1)  # Force update
