@@ -154,7 +154,9 @@ ui <- fluidPage(
       column(1),
       column(1, downloadBttn("save_submit", "Download")),
       column(1),
-      column(1, fileInput("upload_schedule", "Upload", accept = "txt"))
+      column(1, fileInput("upload_schedule", "Upload", accept = "txt")),
+      column(1),
+      column(1, actionBttn("options_btn", "Options"))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
@@ -402,7 +404,21 @@ server <- function(input, output, session) {
     # update_shaded( selected_sections(), data_var )
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
-}
+
+  observeEvent(input$options_btn, {
+    cat("options_btn pushed")
+    showModal(modalDialog(
+      title = "Options",
+      checkboxGroupInput(
+        inputId = "show_options",
+        label = "Show",
+        choices = c("Shadowed", "Selected", "Not Selected"),
+        selected = c("Selected", "Not Selected")  # Optional default selections
+      ),
+      easyClose = TRUE
+    ))
+  })
+  }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
