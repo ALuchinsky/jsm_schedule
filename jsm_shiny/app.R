@@ -253,6 +253,7 @@ server <- function(input, output, session) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
+      update_shaded( selected_sections(), data_var )
         shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
         final_data <- data.frame(
           id = data_var$id, 
@@ -356,11 +357,18 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       text <- ""
-      data_var <- data()
       s_sections <- selected_sections()
       text <- paste(text, paste0(" You have ", length(s_sections), " selected sections"), sep = "\n")
-      sec_nums <- sapply(s_sections, function(i) paste0("\t Section ", i))
-      text <- paste(text, paste(sec_nums, collapse = "\n", sep = "\n"), sep="\n")
+      days <- DF[DF$id %in% s_sections,]$day %>% unique
+      for(d in days) {
+        df <- DF %>% filter(day == d) %>% filter(id %in% s_sections)
+        text <- paste(text, "\n=========", d, "=========", sep = "\n")
+        for(i in 1:nrow(df)) {
+          line <- paste0(df[i,]$time, ": section ", df[i,]$id," \"", df[i,]$title,"\" /", df[i,]$type, "/")
+          text <- paste(text, line, sep="\n")
+        }
+      }
+      cat("text=\n", text, "\n")
       writeLines(text, file)
     }
   )
