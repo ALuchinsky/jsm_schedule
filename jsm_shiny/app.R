@@ -16,6 +16,7 @@ suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(htmlwidgets))
+suppressPackageStartupMessages(library(stringr))
 
 empty_table =         data.frame(
   id = "1",
@@ -153,7 +154,7 @@ ui <- fluidPage(
       column(1),
       column(1, downloadBttn("save_submit", "Download")),
       column(1),
-      column(1, actionBttn("load_btn", "Load Schedule"))
+      column(1, fileInput("upload_schedule", "Upload", accept = "txt"))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
@@ -377,9 +378,17 @@ server <- function(input, output, session) {
     ))
   })
   
-  observeEvent(input$load_submit, {
-    sects <- unname(sapply(strsplit(input$loaded_sections, ",")[[1]], as.integer))
-    cat("Submitted: ", sects)
+
+  observeEvent(input$upload_schedule, {
+    req(input$upload_schedule)
+    text <- paste(readLines(input$upload_schedule$datapath, warn = FALSE), collapse = "\n")
+    cat("=== text ======\n")
+    cat(text, "\n")
+    numbers <- stringr::str_extract_all(text, "\\b\\d{4}\\b")[[1]]
+    cat("-- numbers --\n")
+    print(numbers)
+    sects <- sapply(numbers, as.integer, USE.NAMES = FALSE)
+    cat("Submitted: ", sects, "\n")
     selected_sections(sects)
     data_var <- data()
     update_shaded( selected_sections(), data_var )
