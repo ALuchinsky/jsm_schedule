@@ -16,6 +16,7 @@ suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(htmlwidgets))
+suppressPackageStartupMessages(library(stringr))
 
 empty_table =         data.frame(
   id = "1",
@@ -83,6 +84,34 @@ writeClipboard <- function(v) {
   close(clip)
 }
 
+update_shaded <- function(sel_sections, data_var) {
+  shaded_events <<- c()
+  # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
+  for(s_section in sel_sections) {
+    sid_data <- data_var[data_var$section == s_section,]
+    sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
+    sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
+    if (length(sid_start) == 0 || is.na(sid_start) ||
+        length(sid_end)   == 0 || is.na(sid_end)) {
+      next
+    }
+    for(ev_section in data_var$section) {
+      if(ev_section == s_section) next;
+      ev_data = data_var[data_var$section == ev_section,]
+      ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
+      ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
+      if (length(ev_start) == 0 || is.na(ev_start) ||
+          length(ev_end)   == 0 || is.na(ev_end)) {
+        next
+      }
+      if( !( ev_end <= sid_start || ev_start >= sid_end)) {
+        shaded_events <<- append(shaded_events, ev_section)
+      }
+    }
+  }
+  cat("shaded_events = ", shaded_events,"\n")
+}
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     tags$head(
@@ -121,7 +150,11 @@ ui <- fluidPage(
       column(1),
       column(1, actionBttn("info_btn", "Info")),
       column(1),
-      column(1, actionBttn("redraw_btn", "Redraw"))
+      column(1, actionBttn("redraw_btn", "Redraw")),
+      column(1),
+      column(1, downloadBttn("save_submit", "Download")),
+      column(1),
+      column(1, fileInput("upload_schedule", "Upload", accept = "txt"))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
@@ -220,6 +253,7 @@ server <- function(input, output, session) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
+      update_shaded( selected_sections(), data_var )
         shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
         final_data <- data.frame(
           id = data_var$id, 
@@ -291,31 +325,7 @@ server <- function(input, output, session) {
         cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       }
       # updating shaded
-      shaded_events <<- c()
-      # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
-      for(s_section in selected_sections()) {
-        sid_data <- data_var[data_var$section == s_section,]
-        sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
-        sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
-        if (length(sid_start) == 0 || is.na(sid_start) ||
-            length(sid_end)   == 0 || is.na(sid_end)) {
-          next
-        }
-        for(ev_section in data_var$section) {
-          if(ev_section == s_section) next;
-          ev_data = data_var[data_var$section == ev_section,]
-          ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
-          ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
-          if (length(ev_start) == 0 || is.na(ev_start) ||
-              length(ev_end)   == 0 || is.na(ev_end)) {
-            next
-          }
-          if( !( ev_end <= sid_start || ev_start >= sid_end)) {
-            shaded_events <<- append(shaded_events, ev_section)
-          }
-        }
-      }
-      cat("shaded_events = ", shaded_events,"\n")
+      # update_shaded( selected_sections(), data_var )
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
   })
@@ -337,6 +347,59 @@ server <- function(input, output, session) {
   
   observeEvent(input$redraw_btn, {
     cat("Redraw #", redraw_trigger(), "\n")
+    redraw_trigger(redraw_trigger() + 1)  # Force update
+  })
+ 
+
+  output$save_submit <- downloadHandler(
+    filename = function() {
+      "schedule.txt"
+    },
+    content = function(file) {
+      text <- ""
+      s_sections <- selected_sections()
+      text <- paste(text, paste0(" You have ", length(s_sections), " selected sections"), sep = "\n")
+      days <- DF[DF$id %in% s_sections,]$day %>% unique
+      for(d in days) {
+        df <- DF %>% filter(day == d) %>% filter(id %in% s_sections)
+        text <- paste(text, "\n=========", d, "=========", sep = "\n")
+        for(i in 1:nrow(df)) {
+          line <- paste0(df[i,]$time, ": section ", df[i,]$id," \"", df[i,]$title,"\" /", df[i,]$type, "/")
+          text <- paste(text, line, sep="\n")
+        }
+      }
+      cat("text=\n", text, "\n")
+      writeLines(text, file)
+    }
+  )
+    
+
+  
+  observeEvent(input$load_btn, {
+    cat("Load button pushed\n")
+    showModal(modalDialog(
+      title = "Load Data",
+      tags$p("Paste comma-separates section numbers"),
+      textInput("loaded_sections", "Sections:"),
+      easyClose = TRUE,
+      footer = actionBttn("load_submit", "OK")
+    ))
+  })
+  
+
+  observeEvent(input$upload_schedule, {
+    req(input$upload_schedule)
+    text <- paste(readLines(input$upload_schedule$datapath, warn = FALSE), collapse = "\n")
+    cat("=== text ======\n")
+    cat(text, "\n")
+    numbers <- stringr::str_extract_all(text, "\\b\\d{4}\\b")[[1]]
+    cat("-- numbers --\n")
+    print(numbers)
+    sects <- sapply(numbers, as.integer, USE.NAMES = FALSE)
+    cat("Submitted: ", sects, "\n")
+    selected_sections(sects)
+    data_var <- data()
+    # update_shaded( selected_sections(), data_var )
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 }
