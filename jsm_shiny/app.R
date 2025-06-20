@@ -154,7 +154,9 @@ ui <- fluidPage(
       column(1),
       column(1, downloadBttn("save_submit", "Download")),
       column(1),
-      column(1, fileInput("upload_schedule", "Upload", accept = "txt"))
+      column(1, fileInput("upload_schedule", "Upload", accept = "txt")),
+      column(1),
+      column(1, actionBttn("options_btn", "Options"))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
@@ -246,6 +248,9 @@ server <- function(input, output, session) {
   })
   
   tv_data <- reactive({
+    show_shadowed <- is.null(input$show_options) || ("Shadowed" %in% input$show_options)
+    show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
+    show_nonselected <- is.null(input$show_options) || ("Not Selected" %in% input$show_options)
     data_var  <- data()
     print("tv_data: data_var")
     print(data_var)
@@ -254,20 +259,29 @@ server <- function(input, output, session) {
       return(empty_table)
     } else {
       update_shaded( selected_sections(), data_var )
-        shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
-        final_data <- data.frame(
-          id = data_var$id, 
-          start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
-          end   = format(as.POSIXct(paste(data_var$day, data_var$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
-          content = data_var$title,
-          style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
-          title = data_var$popup
+      if(! show_shadowed) {
+        data_var <- data_var[!(data_var$section %in% shaded_events), ]
+      }        
+      if(! show_selected) {
+        data_var <- data_var[!(data_var$section %in% selected_sections()), ]
+      }        
+      if(! show_nonselected) {
+        data_var <- data_var[data_var$section %in% selected_sections(), ]
+      }        
+      shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
+      final_data <- data.frame(
+        id = data_var$id, 
+        start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+        end   = format(as.POSIXct(paste(data_var$day, data_var$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+        content = data_var$title,
+        style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
+        title = data_var$popup
       ) %>% mutate(
         style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
       )
-        print("tv_data: shaded_events")
-        print(shaded_events)
-        print("End of tv_data")
+      print("tv_data: shaded_events")
+      print(shaded_events)
+      print("End of tv_data")
         
       return(final_data)
     }
@@ -335,7 +349,8 @@ server <- function(input, output, session) {
     str(data())
     cat(" shaded_events = ", shaded_events, "\n")
     cat(" selected_sections=", selected_sections(), "\n")
-    writeClipboard(selected_sections())
+    cat("Selected options:", input$show_options, "\n")
+    print(input$show_options)
   })
   
   observeEvent(input$reset_btn, {
@@ -402,7 +417,24 @@ server <- function(input, output, session) {
     # update_shaded( selected_sections(), data_var )
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
-}
+
+  observeEvent(input$options_btn, {
+    cat("options_btn pushed")
+    showModal(modalDialog(
+      title = "Display Options",
+      checkboxGroupButtons(
+        inputId = "show_options",
+        label = "Show",
+        choices = c("Shadowed", "Selected", "Not Selected"),
+        selected = c("Shadowed", "Selected", "Not Selected"),
+        justified = TRUE,
+        checkIcon = list(yes = icon("check"))
+      ),
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
+  })
+  }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
