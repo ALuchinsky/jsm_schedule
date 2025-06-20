@@ -325,7 +325,7 @@ server <- function(input, output, session) {
         cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       }
       # updating shaded
-      update_shaded( selected_sections(), data_var )
+      # update_shaded( selected_sections(), data_var )
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
   })
@@ -399,7 +399,7 @@ server <- function(input, output, session) {
     cat("Submitted: ", sects, "\n")
     selected_sections(sects)
     data_var <- data()
-    update_shaded( selected_sections(), data_var )
+    # update_shaded( selected_sections(), data_var )
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 }
