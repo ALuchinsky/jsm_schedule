@@ -248,6 +248,7 @@ server <- function(input, output, session) {
   })
   
   tv_data <- reactive({
+    show_shadowed <- is.null(input$show_options) || ("Shadowed" %in% input$show_options)
     data_var  <- data()
     print("tv_data: data_var")
     print(data_var)
@@ -264,9 +265,12 @@ server <- function(input, output, session) {
           content = data_var$title,
           style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
           title = data_var$popup
-      ) %>% mutate(
-        style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
-      )
+        ) %>% mutate(
+          style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
+        )
+        if(! show_shadowed) {
+          final_data <- final_data %>% filter(!(id %in% shaded_ids))
+        }        
         print("tv_data: shaded_events")
         print(shaded_events)
         print("End of tv_data")
@@ -337,9 +341,8 @@ server <- function(input, output, session) {
     str(data())
     cat(" shaded_events = ", shaded_events, "\n")
     cat(" selected_sections=", selected_sections(), "\n")
-    cat(" show_options = ", input$show_options, "\n")
-    cat("\t Shadowed: ", "Shadowed" %in% input$show_options,"\n")
-    writeClipboard(selected_sections())
+    cat("Selected options:", input$show_options, "\n")
+    print(input$show_options)
   })
   
   observeEvent(input$reset_btn, {
@@ -410,14 +413,17 @@ server <- function(input, output, session) {
   observeEvent(input$options_btn, {
     cat("options_btn pushed")
     showModal(modalDialog(
-      title = "Options",
-      checkboxGroupInput(
+      title = "Display Options",
+      checkboxGroupButtons(
         inputId = "show_options",
         label = "Show",
         choices = c("Shadowed", "Selected", "Not Selected"),
-        selected = c("Shadowed", "Selected", "Not Selected")  # Optional default selections
+        selected = c("Shadowed", "Selected", "Not Selected"),
+        justified = TRUE,
+        checkIcon = list(yes = icon("check"))
       ),
-      easyClose = TRUE
+      easyClose = TRUE,
+      footer = modalButton("Close")
     ))
   })
   }
