@@ -249,6 +249,8 @@ server <- function(input, output, session) {
   
   tv_data <- reactive({
     show_shadowed <- is.null(input$show_options) || ("Shadowed" %in% input$show_options)
+    show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
+    show_nonselected <- is.null(input$show_options) || ("Not Selected" %in% input$show_options)
     data_var  <- data()
     print("tv_data: data_var")
     print(data_var)
@@ -259,6 +261,12 @@ server <- function(input, output, session) {
       update_shaded( selected_sections(), data_var )
       if(! show_shadowed) {
         data_var <- data_var[!(data_var$section %in% shaded_events), ]
+      }        
+      if(! show_selected) {
+        data_var <- data_var[!(data_var$section %in% selected_sections()), ]
+      }        
+      if(! show_nonselected) {
+        data_var <- data_var[data_var$section %in% selected_sections(), ]
       }        
       shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
       final_data <- data.frame(
