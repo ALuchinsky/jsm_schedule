@@ -350,15 +350,38 @@ server <- function(input, output, session) {
  
   observeEvent(input$save_btn,{
     cat("Save button pushed\n")
+    # showModal(modalDialog(
+    #   title = "Save Schdule",
+    #   tags$p("Session IDs of your schedules events are:"),
+    #   tags$p(paste(selected_sections(), collapse = ",")),
+    #   tags$p("You can copy that to the clippbard and save it for later"),
+    #   easyClose = TRUE,
+    #   footer = modalButton("Close")
+    # ))
     showModal(modalDialog(
-      title = "Save Schdule",
-      tags$p("Session IDs of your schedules events are:"),
-      tags$p(paste(selected_sections(), collapse = ",")),
-      tags$p("You can copy that to the clippbard and save it for later"),
+      title = "Save Schedule to file",
+      tags$p("Your file will be saved to a Download folder"),
       easyClose = TRUE,
-      footer = modalButton("Close")
+      footer = downloadBttn("save_submit", "OK")
     ))
-  }) 
+  })
+
+  output$save_submit <- downloadHandler(
+    filename = function() {
+      "schedule.txt"
+    },
+    content = function(file) {
+      text <- ""
+      data_var <- data()
+      s_sections <- selected_sections()
+      text <- paste(text, paste0(" You have ", length(s_sections), " selected sections"), sep = "\n")
+      sec_nums <- sapply(s_sections, function(i) paste0("\t Section ", i))
+      text <- paste(text, paste(sec_nums, collapse = "\n", sep = "\n"), sep="\n")
+      writeLines(text, file)
+    }
+  )
+    
+
   
   observeEvent(input$load_btn, {
     cat("Load button pushed\n")
