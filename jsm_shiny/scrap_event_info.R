@@ -21,6 +21,7 @@ load_section_info <- function(id, prefix = "https://ww3.aievolution.com/JSMAnnua
     title = gsub("\\r","", html_text2(titles[i]) )
     speakers <- html_speakers[[i]] %>% html_elements(".speakername") %>% html_text2() %>% unique %>% paste(collapse = ", ")
     df_ <- data.frame(
+      section = id, 
       title = trimws(title),
       speakers = trimws(speakers),
       room = room

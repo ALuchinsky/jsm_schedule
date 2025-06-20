@@ -30,6 +30,7 @@ empty_table =         data.frame(
 
 
 DF <- read.csv("time_table.csv")
+DF_sections <- data.frame()
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
 shaded_events <- c()
@@ -335,6 +336,7 @@ server <- function(input, output, session) {
       cat("clicked_section = ", clicked_section, "\n")
       
       df_section = load_section_info(clicked_section)
+      DF_sections <- DF_sections %>% bind_rows(df_section) %>% unique
       
       if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
