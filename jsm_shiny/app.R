@@ -337,6 +337,8 @@ server <- function(input, output, session) {
     str(data())
     cat(" shaded_events = ", shaded_events, "\n")
     cat(" selected_sections=", selected_sections(), "\n")
+    cat(" show_options = ", input$show_options, "\n")
+    cat("\t Shadowed: ", "Shadowed" %in% input$show_options,"\n")
     writeClipboard(selected_sections())
   })
   
@@ -413,7 +415,7 @@ server <- function(input, output, session) {
         inputId = "show_options",
         label = "Show",
         choices = c("Shadowed", "Selected", "Not Selected"),
-        selected = c("Selected", "Not Selected")  # Optional default selections
+        selected = c("Shadowed", "Selected", "Not Selected")  # Optional default selections
       ),
       easyClose = TRUE
     ))
