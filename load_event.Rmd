@@ -30,6 +30,7 @@ cat(title)
 
 ```{r}
 room <- html %>% html_elements("#eventPreview_roomAssignments") %>% html_text2()
+room <- trimws(strsplit(room, ":")[[1]][2])
 room
 ```
 
@@ -59,6 +60,43 @@ new_html %>% html_elements(".speakername") %>% html_text2() %>% unique
 
 
 ```{r}
-siblings <- html_elements(speakers[1], xpath = "../*[not(self::span)]") 
+sp2 = speakers[2] %>% html_element(xpath = "..")
+```
+
+```{r}
+as.character(sp1) == as.character(sp2)
+```
+```{r}
+char_speakers <- c()
+for(i in 1:length(speakers)) {
+  char_speakers <- append(char_speakers, as.character(speakers[i] %>% html_element(xpath = "..")))
+}
+html_speakers <- lapply(unique(char_speakers), read_html)
+```
+
+```{r}
+html_speakers[[3]] %>% html_elements(".speakername") %>% html_text2() %>% unique %>% paste(collapse = ", ")
+```
+
+```{r}
+descs[3] %>% html_text2()
+```
+```{r}
+DF <- data.frame()
+for(i in 1:length(titles)) {
+  title = gsub("\\r","", html_text2(titles[i]) )
+  speakers <- html_speakers[[i]] %>% html_elements(".speakername") %>% html_text2() %>% unique %>% paste(collapse = ", ")
+  df_ <- data.frame(
+    title = trimws(title),
+    speakers = trimws(speakers),
+    room = room
+    )
+  DF <- bind_rows(DF, df_)
+}
+DF
+```
+
+```{r}
+write.csv(DF, paste0("./jsm_shiny/events/", id, ".csv"), row.names = FALSE)
 ```
 
