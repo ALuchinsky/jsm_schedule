@@ -17,6 +17,9 @@ suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(htmlwidgets))
 suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(rvest))
+
+source("./scrap_event_info.R")
 
 empty_table =         data.frame(
   id = "1",
@@ -330,6 +333,9 @@ server <- function(input, output, session) {
         return()
       }
       cat("clicked_section = ", clicked_section, "\n")
+      
+      df_section = load_section_info(clicked_section)
+      
       if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
         selected_sections( c(selected_sections(), clicked_section))
