@@ -257,23 +257,23 @@ server <- function(input, output, session) {
       return(empty_table)
     } else {
       update_shaded( selected_sections(), data_var )
-        shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
-        final_data <- data.frame(
-          id = data_var$id, 
-          start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
-          end   = format(as.POSIXct(paste(data_var$day, data_var$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
-          content = data_var$title,
-          style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
-          title = data_var$popup
-        ) %>% mutate(
-          style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
-        )
-        if(! show_shadowed) {
-          final_data <- final_data %>% filter(!(id %in% shaded_ids))
-        }        
-        print("tv_data: shaded_events")
-        print(shaded_events)
-        print("End of tv_data")
+      if(! show_shadowed) {
+        data_var <- data_var[!(data_var$section %in% shaded_events), ]
+      }        
+      shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
+      final_data <- data.frame(
+        id = data_var$id, 
+        start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+        end   = format(as.POSIXct(paste(data_var$day, data_var$end), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
+        content = data_var$title,
+        style = data_var$type %>% sapply(get_event_style) %>% sapply(unlist),
+        title = data_var$popup
+      ) %>% mutate(
+        style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
+      )
+      print("tv_data: shaded_events")
+      print(shaded_events)
+      print("End of tv_data")
         
       return(final_data)
     }
