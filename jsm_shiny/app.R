@@ -151,7 +151,7 @@ ui <- fluidPage(
       column(1),
       column(1, actionBttn("redraw_btn", "Redraw")),
       column(1),
-      column(1, actionBttn("save_btn", "Save Schedule")),
+      column(1, downloadBttn("save_submit", "Download")),
       column(1),
       column(1, actionBttn("load_btn", "Load Schedule"))
     ),
@@ -348,23 +348,6 @@ server <- function(input, output, session) {
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
  
-  observeEvent(input$save_btn,{
-    cat("Save button pushed\n")
-    # showModal(modalDialog(
-    #   title = "Save Schdule",
-    #   tags$p("Session IDs of your schedules events are:"),
-    #   tags$p(paste(selected_sections(), collapse = ",")),
-    #   tags$p("You can copy that to the clippbard and save it for later"),
-    #   easyClose = TRUE,
-    #   footer = modalButton("Close")
-    # ))
-    showModal(modalDialog(
-      title = "Save Schedule to file",
-      tags$p("Your file will be saved to a Download folder"),
-      easyClose = TRUE,
-      footer = downloadBttn("save_submit", "OK")
-    ))
-  })
 
   output$save_submit <- downloadHandler(
     filename = function() {
