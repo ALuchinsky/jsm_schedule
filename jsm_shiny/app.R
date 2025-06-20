@@ -227,7 +227,7 @@ server <- function(input, output, session) {
     data_ <<- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
-      filter(grepl(tolower(title_search_pattern()), tolower(title)) )
+      filter(grepl(tolower(title_search_pattern()), tolower(title)) | grepl(title_search_pattern(), id))
     if(nrow(data_) == 0) {
       return( data_)
     }
