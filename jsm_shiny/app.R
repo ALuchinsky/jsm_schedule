@@ -83,6 +83,34 @@ writeClipboard <- function(v) {
   close(clip)
 }
 
+update_shaded <- function(sel_sections, data_var) {
+  shaded_events <<- c()
+  # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
+  for(s_section in sel_sections) {
+    sid_data <- data_var[data_var$section == s_section,]
+    sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
+    sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
+    if (length(sid_start) == 0 || is.na(sid_start) ||
+        length(sid_end)   == 0 || is.na(sid_end)) {
+      next
+    }
+    for(ev_section in data_var$section) {
+      if(ev_section == s_section) next;
+      ev_data = data_var[data_var$section == ev_section,]
+      ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
+      ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
+      if (length(ev_start) == 0 || is.na(ev_start) ||
+          length(ev_end)   == 0 || is.na(ev_end)) {
+        next
+      }
+      if( !( ev_end <= sid_start || ev_start >= sid_end)) {
+        shaded_events <<- append(shaded_events, ev_section)
+      }
+    }
+  }
+  cat("shaded_events = ", shaded_events,"\n")
+}
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     tags$head(
@@ -295,31 +323,7 @@ server <- function(input, output, session) {
         cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
       }
       # updating shaded
-      shaded_events <<- c()
-      # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
-      for(s_section in selected_sections()) {
-        sid_data <- data_var[data_var$section == s_section,]
-        sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
-        sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
-        if (length(sid_start) == 0 || is.na(sid_start) ||
-            length(sid_end)   == 0 || is.na(sid_end)) {
-          next
-        }
-        for(ev_section in data_var$section) {
-          if(ev_section == s_section) next;
-          ev_data = data_var[data_var$section == ev_section,]
-          ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
-          ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
-          if (length(ev_start) == 0 || is.na(ev_start) ||
-              length(ev_end)   == 0 || is.na(ev_end)) {
-            next
-          }
-          if( !( ev_end <= sid_start || ev_start >= sid_end)) {
-            shaded_events <<- append(shaded_events, ev_section)
-          }
-        }
-      }
-      cat("shaded_events = ", shaded_events,"\n")
+      update_shaded( selected_sections(), data_var )
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
   })
@@ -370,7 +374,10 @@ server <- function(input, output, session) {
   observeEvent(input$load_submit, {
     sects <- unname(sapply(strsplit(input$loaded_sections, ",")[[1]], as.integer))
     cat("Submitted: ", sects)
-    
+    selected_sections(sects)
+    data_var <- data()
+    update_shaded( selected_sections(), data_var )
+    redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 }
 
