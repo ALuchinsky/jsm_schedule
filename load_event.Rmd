@@ -33,3 +33,32 @@ room <- html %>% html_elements("#eventPreview_roomAssignments") %>% html_text2()
 room
 ```
 
+```{r}
+titles <- html %>% html_elements(".presentation-title")
+titles %>% length
+```
+
+```{r}
+descs <- html_elements(html, ".presentationPreview_description")
+descs %>% length
+```
+
+```{r}
+presentations <- html %>% html_elements(".eventlevelthree")
+```
+
+```{r}
+html %>% html_element(".presesntaionspeakers") %>% html_element(xpath = "..")
+```
+```{r}
+speakers <- html %>% html_elements(".presesntaionspeakers")
+sp1 = speakers[1] %>% html_element(xpath = "..")
+new_html <- read_html(paste0(as.character(sp1), collapse = ""))
+new_html %>% html_elements(".speakername") %>% html_text2() %>% unique
+```
+
+
+```{r}
+siblings <- html_elements(speakers[1], xpath = "../*[not(self::span)]") 
+```
+
