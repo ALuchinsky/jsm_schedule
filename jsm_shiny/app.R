@@ -336,7 +336,16 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$timeline_rightclick, {
+    data_var <- data()
     cat("right click\n")
+    clicked_id <- input$timeline_rightclick$item
+    cat("item ", clicked_id, " is clicked\n")
+    if (!is.null(clicked_id)) {
+      clicked_section <- data_var[data_var$id == clicked_id,]$section
+      df_section = load_section_info(clicked_section)
+      DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
+      cat("[DF_sections] = ", nrow(DF_sections), "\n")
+    }
   })
   
   observeEvent(input$timeline_doubleclick, {
@@ -350,10 +359,6 @@ server <- function(input, output, session) {
         return()
       }
       cat("clicked_section = ", clicked_section, "\n")
-      
-      df_section = load_section_info(clicked_section)
-      DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
-      cat("[DF_sections] = ", nrow(DF_sections), "\n")
       
       if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
