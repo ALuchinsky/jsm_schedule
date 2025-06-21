@@ -336,8 +336,12 @@ server <- function(input, output, session) {
     session$sendCustomMessage("bindDoubleClick", "timeline")
   })
   
-  output$datatable_modal <- DT::renderDataTable({
+  modal_table <- reactiveVal(
     df_section
+  )
+  
+  output$datatable_modal <- DT::renderDataTable({
+    modal_table()
   })
   
   observeEvent(input$timeline_rightclick, {
@@ -348,6 +352,7 @@ server <- function(input, output, session) {
     if (!is.null(clicked_id)) {
       clicked_section <- data_var[data_var$id == clicked_id,]$section
       df_section = load_section_info(clicked_section)
+      modal_table(df_section)
       DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
       cat("[DF_sections] = ", nrow(DF_sections), "\n")
       if(nrow(df_section)>0) {
