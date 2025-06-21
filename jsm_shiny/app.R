@@ -230,6 +230,8 @@ server <- function(input, output, session) {
 
   # redraw function
   data <- reactive({
+    cat("DF_sections")
+    str(DF_sections)
     data_ <<- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
@@ -241,13 +243,16 @@ server <- function(input, output, session) {
     cat("selected_ids = ", selected_ids, "\n")
     data_var <- data_  %>% 
       separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
-      mutate(section = id, popup = paste0(title, "|", type, "| section: ", id)) %>% 
+      mutate(section = id, popup = paste0(title, "|", type, "| section: ", id))
+    data_var$n_presenters <- sapply(data_var$id, function(i) sum(DF_sections$section == i))
+    data_var <- data_var %>% 
+      mutate(popup = paste0(popup, " # = ", n_presenters)) %>% 
       transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
       mutate(title = ifelse(section %in% selected_ids, toupper(title), title)) %>% 
       mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
     
-    print("data(): data_var")
-    print(data_var)
+    # print("data(): data_var")
+    # print(data_var)
     return(data_var)
   })
   
@@ -256,8 +261,8 @@ server <- function(input, output, session) {
     show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
     show_nonselected <- is.null(input$show_options) || ("Not Selected" %in% input$show_options)
     data_var  <- data()
-    print("tv_data: data_var")
-    print(data_var)
+    # print("tv_data: data_var")
+    # print(data_var)
     if(nrow(data_var) == 0) {
       cat("Empty data table\n")
       return(empty_table)
@@ -283,8 +288,8 @@ server <- function(input, output, session) {
       ) %>% mutate(
         style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
       )
-      print("tv_data: shaded_events")
-      print(shaded_events)
+      # print("tv_data: shaded_events")
+      # print(shaded_events)
       print("End of tv_data")
         
       return(final_data)
@@ -336,7 +341,8 @@ server <- function(input, output, session) {
       cat("clicked_section = ", clicked_section, "\n")
       
       df_section = load_section_info(clicked_section)
-      DF_sections <- DF_sections %>% bind_rows(df_section) %>% unique
+      DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
+      cat("[DF_sections] = ", nrow(DF_sections), "\n")
       
       if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
