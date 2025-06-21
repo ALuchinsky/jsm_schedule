@@ -18,7 +18,7 @@ suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(htmlwidgets))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(rvest))
-
+suppressPackageStartupMessages(library(DT))
 source("./scrap_event_info.R")
 
 empty_table =         data.frame(
@@ -30,6 +30,7 @@ empty_table =         data.frame(
 
 
 DF <- read.csv("time_table.csv")
+df_section <- load_section_info(1057)
 DF_sections <- data.frame()
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
@@ -335,6 +336,10 @@ server <- function(input, output, session) {
     session$sendCustomMessage("bindDoubleClick", "timeline")
   })
   
+  output$datatable_modal <- DT::renderDataTable({
+    df_section
+  })
+  
   observeEvent(input$timeline_rightclick, {
     data_var <- data()
     cat("right click\n")
@@ -345,6 +350,16 @@ server <- function(input, output, session) {
       df_section = load_section_info(clicked_section)
       DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
       cat("[DF_sections] = ", nrow(DF_sections), "\n")
+      if(nrow(df_section)>0) {
+        showModal(modalDialog(
+          title = "Event Info",
+          DT::dataTableOutput("datatable_modal"),
+          easyClose = TRUE,
+          tags$p(paste0("Section #: ", df_section$section[1])),
+          tags$p(paste0("Room: ", df_section$room[1])),
+          footer = modalButton("OK")
+        ))
+      }
     }
   })
   
