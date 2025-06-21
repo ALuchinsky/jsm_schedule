@@ -17,6 +17,9 @@ suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(lubridate))
 suppressPackageStartupMessages(library(htmlwidgets))
 suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(rvest))
+suppressPackageStartupMessages(library(DT))
+source("./scrap_event_info.R")
 
 empty_table =         data.frame(
   id = "1",
@@ -27,6 +30,8 @@ empty_table =         data.frame(
 
 
 DF <- read.csv("time_table.csv")
+df_section <- load_section_info(1057)
+DF_sections <- data.frame()
 days <- DF %>% pull(day) %>% unique
 types <- DF %>% pull(type) %>% unique
 shaded_events <- c()
@@ -130,8 +135,15 @@ ui <- fluidPage(
         if (el._dblclickBound) return;
         el._dblclickBound = true;
 
+        // Bind double click
         el.timeline.on('doubleClick', function (props) {
-          Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
+            Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
+        });
+
+        // Bind right click (context menu)
+        el.timeline.on('contextmenu', function (props) {
+            Shiny.setInputValue(id + '_rightclick', props, {priority: 'event'});
+            props.event.preventDefault(); // prevent default browser menu
         });
       });
     ")),
@@ -226,6 +238,8 @@ server <- function(input, output, session) {
 
   # redraw function
   data <- reactive({
+    cat("DF_sections")
+    str(DF_sections)
     data_ <<- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
@@ -237,13 +251,16 @@ server <- function(input, output, session) {
     cat("selected_ids = ", selected_ids, "\n")
     data_var <- data_  %>% 
       separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
-      mutate(section = id, popup = paste0(title, "|", type, "| section: ", id)) %>% 
+      mutate(section = id, popup = paste0(title, "|", type, "| section: ", id))
+    data_var$n_presenters <- sapply(data_var$id, function(i) sum(DF_sections$section == i))
+    data_var <- data_var %>% 
+      mutate(popup = paste0(popup, " # = ", n_presenters)) %>% 
       transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
       mutate(title = ifelse(section %in% selected_ids, toupper(title), title)) %>% 
       mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
     
-    print("data(): data_var")
-    print(data_var)
+    # print("data(): data_var")
+    # print(data_var)
     return(data_var)
   })
   
@@ -252,8 +269,8 @@ server <- function(input, output, session) {
     show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
     show_nonselected <- is.null(input$show_options) || ("Not Selected" %in% input$show_options)
     data_var  <- data()
-    print("tv_data: data_var")
-    print(data_var)
+    # print("tv_data: data_var")
+    # print(data_var)
     if(nrow(data_var) == 0) {
       cat("Empty data table\n")
       return(empty_table)
@@ -279,8 +296,8 @@ server <- function(input, output, session) {
       ) %>% mutate(
         style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
       )
-      print("tv_data: shaded_events")
-      print(shaded_events)
+      # print("tv_data: shaded_events")
+      # print(shaded_events)
       print("End of tv_data")
         
       return(final_data)
@@ -319,6 +336,38 @@ server <- function(input, output, session) {
     session$sendCustomMessage("bindDoubleClick", "timeline")
   })
   
+  modal_table <- reactiveVal(
+    df_section
+  )
+  
+  output$datatable_modal <- DT::renderDataTable({
+    modal_table()
+  })
+  
+  observeEvent(input$timeline_rightclick, {
+    data_var <- data()
+    cat("right click\n")
+    clicked_id <- input$timeline_rightclick$item
+    cat("item ", clicked_id, " is clicked\n")
+    if (!is.null(clicked_id)) {
+      clicked_section <- data_var[data_var$id == clicked_id,]$section
+      df_section = load_section_info(clicked_section)
+      modal_table(df_section)
+      DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
+      cat("[DF_sections] = ", nrow(DF_sections), "\n")
+      if(nrow(df_section)>0) {
+        showModal(modalDialog(
+          title = "Event Info",
+          tags$p(paste0("Section #: ", df_section$section[1])),
+          tags$p(paste0("Room: ", df_section$room[1])),
+          DT::dataTableOutput("datatable_modal"),
+          easyClose = TRUE,
+          footer = modalButton("OK")
+        ))
+      }
+    }
+  })
+  
   observeEvent(input$timeline_doubleclick, {
     clicked_id <- input$timeline_doubleclick$item
     cat("item ", clicked_id, " is clicked\n")
@@ -330,6 +379,7 @@ server <- function(input, output, session) {
         return()
       }
       cat("clicked_section = ", clicked_section, "\n")
+      
       if(is.null(clicked_section)) return();
       if (!(clicked_section %in% selected_sections())) {
         selected_sections( c(selected_sections(), clicked_section))
