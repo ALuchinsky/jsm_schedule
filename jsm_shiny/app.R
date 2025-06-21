@@ -358,10 +358,10 @@ server <- function(input, output, session) {
       if(nrow(df_section)>0) {
         showModal(modalDialog(
           title = "Event Info",
-          DT::dataTableOutput("datatable_modal"),
-          easyClose = TRUE,
           tags$p(paste0("Section #: ", df_section$section[1])),
           tags$p(paste0("Room: ", df_section$room[1])),
+          DT::dataTableOutput("datatable_modal"),
+          easyClose = TRUE,
           footer = modalButton("OK")
         ))
       }
