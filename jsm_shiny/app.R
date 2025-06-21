@@ -134,8 +134,15 @@ ui <- fluidPage(
         if (el._dblclickBound) return;
         el._dblclickBound = true;
 
+        // Bind double click
         el.timeline.on('doubleClick', function (props) {
-          Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
+            Shiny.setInputValue(id + '_doubleclick', props, {priority: 'event'});
+        });
+
+        // Bind right click (context menu)
+        el.timeline.on('contextmenu', function (props) {
+            Shiny.setInputValue(id + '_rightclick', props, {priority: 'event'});
+            props.event.preventDefault(); // prevent default browser menu
         });
       });
     ")),
@@ -326,6 +333,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$bind_timevis, {
     session$sendCustomMessage("bindDoubleClick", "timeline")
+  })
+  
+  observeEvent(input$timeline_rightclick, {
+    cat("right click\n")
   })
   
   observeEvent(input$timeline_doubleclick, {
