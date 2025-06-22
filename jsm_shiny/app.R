@@ -311,17 +311,19 @@ server <- function(input, output, session) {
   
   # reactive variable with final data.frame in TimeViz format
   tv_data <- reactive({
+    # updating show flags
     show_shadowed <- is.null(input$show_options) || ("Shadowed" %in% input$show_options)
     show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
     show_nonselected <- is.null(input$show_options) || ("Not Selected" %in% input$show_options)
+    # get current version of the data
     data_var  <- data()
-    # print("tv_data: data_var")
-    # print(data_var)
+    # check for empty
     if(nrow(data_var) == 0) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
       update_shaded( selected_sections(), data_var )
+      # do not show events that we do not want to see
       if(! show_shadowed) {
         data_var <- data_var[!(data_var$section %in% shaded_events), ]
       }        
@@ -330,8 +332,10 @@ server <- function(input, output, session) {
       }        
       if(! show_nonselected) {
         data_var <- data_var[data_var$section %in% selected_sections(), ]
-      }        
+      }
+      # get IDs of shaded events from session numbers
       shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
+      # transfer data to TimeViz format and shade shaded events
       final_data <- data.frame(
         id = data_var$id, 
         start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
@@ -342,16 +346,19 @@ server <- function(input, output, session) {
       ) %>% mutate(
         style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
       )
-      # print("tv_data: shaded_events")
-      # print(shaded_events)
-      print("End of tv_data")
-        
+      if(debug_print) {
+        print("tv_data: shaded_events")
+        print(shaded_events)
+        print("End of tv_data")
+      }
       return(final_data)
     }
   })
 
   
-
+  #=============================================
+  #=== Updating on redraw trigger and bind back all mouse events
+  #=============================================
   output$timeline_ui <- renderUI({
     redraw_trigger()  # trigger timevis redraw when updated
     tagList(
@@ -382,25 +389,41 @@ server <- function(input, output, session) {
     session$sendCustomMessage("bindDoubleClick", "timeline")
   })
   
-  modal_table <- reactiveVal(
-    df_section
-  )
   
+  
+  #=============================================
+  #=== current event detaild for model dialog
+  #=============================================
+  modal_table <- reactiveVal(df_section)
   output$datatable_modal <- DT::renderDataTable({
     modal_table()
   })
   
+  
+  
+  #=============================================
+  #=== mouse rightclick handler
+  #=============================================
   observeEvent(input$timeline_rightclick, {
     data_var <- data()
-    cat("right click\n")
+    if(debug_print) {
+      cat("right click\n")
+    }
+    # getting the ID
     clicked_id <- input$timeline_rightclick$item
-    cat("item ", clicked_id, " is clicked\n")
+    if(debug_print) {
+      cat("item ", clicked_id, " is clicked\n")
+    }
+    # if event is clicked
     if (!is.null(clicked_id)) {
+      # get section number
       clicked_section <- data_var[data_var$id == clicked_id,]$section
+      # download on scrao section details and update rective variable
       df_section = load_section_info(clicked_section)
       modal_table(df_section)
-      DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
-      cat("[DF_sections] = ", nrow(DF_sections), "\n")
+      # DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
+      # cat("[DF_sections] = ", nrow(DF_sections), "\n")
+      # Show the event details dialig box
       if(nrow(df_section)>0) {
         showModal(modalDialog(
           title = "Event Info",
