@@ -421,8 +421,6 @@ server <- function(input, output, session) {
       # download on scrao section details and update rective variable
       df_section = load_section_info(clicked_section)
       modal_table(df_section)
-      # DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
-      # cat("[DF_sections] = ", nrow(DF_sections), "\n")
       # Show the event details dialig box
       if(nrow(df_section)>0) {
         showModal(modalDialog(
@@ -437,32 +435,45 @@ server <- function(input, output, session) {
     }
   })
   
+  # left click handler
+  #   add or remove clicked event from the selected
   observeEvent(input$timeline_doubleclick, {
     clicked_id <- input$timeline_doubleclick$item
-    cat("item ", clicked_id, " is clicked\n")
-    data_var <- data()
+    if(debug_print) {
+      cat("item ", clicked_id, " is clicked\n")
+      data_var <- data()
+    }
     cat("data_var$id[1] = ", data_var$id[1],"\n")
     if (!is.null(clicked_id)) {
+      # get session number and ignire if shaded or null
       clicked_section <- data_var[data_var$id == clicked_id,]$section
+      if(debug_print) {
+        cat("clicked_section = ", clicked_section, "\n")
+      }
+      if(is.null(clicked_section)) return();
       if(clicked_section %in% shaded_events) {
         return()
       }
-      cat("clicked_section = ", clicked_section, "\n")
       
-      if(is.null(clicked_section)) return();
+      # add to selected if not in
       if (!(clicked_section %in% selected_sections())) {
         selected_sections( c(selected_sections(), clicked_section))
-        cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        if(debug_print) {
+          cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        }
+      # or remove from selected if is in
       } else {
         selected_sections( selected_sections()[selected_sections() != clicked_section])
-        cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        if(debug_print) {
+          cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        }
       }
-      # updating shaded
-      # update_shaded( selected_sections(), data_var )
+      # need to redraw
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
   })
   
+  # print internal info on Info button
   observeEvent(input$info_btn,{
     cat("INFO: \n")
     str(data())
@@ -472,6 +483,7 @@ server <- function(input, output, session) {
     print(input$show_options)
   })
   
+  # resets all data on resets button
   observeEvent(input$reset_btn, {
     cat("Reset button clicked\n")
     shaded_events <<- c()
@@ -479,24 +491,32 @@ server <- function(input, output, session) {
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
   
+  # redraws time viz on redraw button
   observeEvent(input$redraw_btn, {
     cat("Redraw #", redraw_trigger(), "\n")
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
  
 
+  # save shedule to file on Download button
   output$save_submit <- downloadHandler(
     filename = function() {
       "schedule.txt"
     },
     content = function(file) {
       text <- ""
+      # for all selected sections
       s_sections <- selected_sections()
+      # put total number
       text <- paste(text, paste0(" You have ", length(s_sections), " selected sections"), sep = "\n")
+      # Scans through days
       days <- DF[DF$id %in% s_sections,]$day %>% unique
+      # and for each day
       for(d in days) {
-        df <- DF %>% filter(day == d) %>% filter(id %in% s_sections)
+        # prints it as a subtitle
         text <- paste(text, "\n=========", d, "=========", sep = "\n")
+        # and prints each event on separate line
+        df <- DF %>% filter(day == d) %>% filter(id %in% s_sections)
         for(i in 1:nrow(df)) {
           line <- paste0(df[i,]$time, ": section ", df[i,]$id," \"", df[i,]$title,"\" /", df[i,]$type, "/")
           text <- paste(text, line, sep="\n")
@@ -508,32 +528,28 @@ server <- function(input, output, session) {
   )
     
 
-  
-  observeEvent(input$load_btn, {
-    cat("Load button pushed\n")
-    showModal(modalDialog(
-      title = "Load Data",
-      tags$p("Paste comma-separates section numbers"),
-      textInput("loaded_sections", "Sections:"),
-      easyClose = TRUE,
-      footer = actionBttn("load_submit", "OK")
-    ))
-  })
-  
-
+  # Uploads schedule on uplod button
   observeEvent(input$upload_schedule, {
     req(input$upload_schedule)
+    # get file content
     text <- paste(readLines(input$upload_schedule$datapath, warn = FALSE), collapse = "\n")
-    cat("=== text ======\n")
-    cat(text, "\n")
+    if(debug_print) {
+      cat("=== text ======\n")
+      cat(text, "\n")
+    }
+    # select only 4-digit numbers
     numbers <- stringr::str_extract_all(text, "\\b\\d{4}\\b")[[1]]
-    cat("-- numbers --\n")
-    print(numbers)
+    if(debug_print) {
+      cat("-- numbers --\n")
+      print(numbers)
+    }
+    # these numbers are selected sections
     sects <- sapply(numbers, as.integer, USE.NAMES = FALSE)
-    cat("Submitted: ", sects, "\n")
+    if(debug_print) {
+      cat("Submitted: ", sects, "\n")
+    }
+    # store them, and redraw
     selected_sections(sects)
-    data_var <- data()
-    # update_shaded( selected_sections(), data_var )
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 
