@@ -28,15 +28,44 @@ empty_table =         data.frame(
   content = "No events"
 )
 
+# global variable to turn on/off the debug console print
+debug_print = FALSE
 
+# Information about all JSM events
+#   scrapped by ../JSM_program.Rmd code from JSM2025 site
+#       id (int): section number
+#       time (string): time of the event in "<start> - <end> format"
+#       title (string): title of the event
+#       type (string): type of the event
+#       day  (string): day (like "Friday, August 1, 2025")
 DF <- read.csv("time_table.csv")
-df_section <- load_section_info(1057)
-DF_sections <- data.frame()
+
+# list of the conference days
 days <- DF %>% pull(day) %>% unique
+
+# list of the conference types
 types <- DF %>% pull(type) %>% unique
+
+# data.frame with detailed information about each of the events (sections)
+#  for each event a list of talks is stores, one row for talk
+#   is collected automatically by web scrapping of the JSM site on the right click of the corresponding event
+#       section (int): section number (could repeat)
+#       root (string): room (could repeat)
+#       title (string): title of the talk
+#       speakers (string): comma-separated list of the authors of the talk
+DF_sections <- data.frame()
+
+# data.frame with detailed information about one event
+#   used to display event-details dialog
+#   format is the same as DF_sections
+df_section <- load_section_info(1057)
+
+# list of all shaded events
+#   updated automatically on each refresh
+#   see update_shaded() function
 shaded_events <- c()
 
-
+# returns html style for each event type
 get_event_style <- function(event_type) {
   style_map <- list(
     "Invited Paper Session " = "background-color: #d62728; color: white; font-weight: bold;",
@@ -62,59 +91,51 @@ get_event_style <- function(event_type) {
   unname(style_map[event_type] %||% "background-color: #dddddd; color: black;")
 }
 
+# converts event style into suitable format
+#   TODO: join these two functions
 get_event_style_string <- function(type) {
   paste0("<span style=\"", get_event_style(type)[[1]], "\">", type, "</span>")
 }
 
-parse_date_string <- function(raw_start) {
-  # Step 1: Remove weekday name
-  # This removes everything before the first comma and the comma itself
-  cleaned <- str_trim(str_remove(raw_start, "^[^,]+,\\s*"))  
-  # cleaned is now: "August 4, 2025 , 7:00 AM"
-  
-  # Step 2: Remove any extra commas
-  cleaned <- str_replace_all(cleaned, ",", "")  
-  # cleaned is now: "August 4 2025 7:00 AM"
-  
-  # Step 3: Parse using mdy_hm (month-day-year hour-minute) or mdy_hms if seconds included
-  parsed_date <- mdy_hm(cleaned)
-  return(parsed_date)
-}
-
+# converts day and time of the event into standard format
 to_POSIX_date <- function(day, time) as.POSIXct(paste(day, time), format = "%A, %B %d, %Y %I:%M %p") 
 
-writeClipboard <- function(v) {
-  clip <- pipe("pbcopy", "w")
-  writeLines(paste(v), clip)
-  close(clip)
-}
 
 update_shaded <- function(sel_sections, data_var) {
   shaded_events <<- c()
-  # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
+  # for each selected section
   for(s_section in sel_sections) {
+    # extract data, start and end times
     sid_data <- data_var[data_var$section == s_section,]
     sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
     sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
+    # skip if they are not defined
     if (length(sid_start) == 0 || is.na(sid_start) ||
         length(sid_end)   == 0 || is.na(sid_end)) {
       next
     }
+    # for each event in the current view
     for(ev_section in data_var$section) {
+      # do not hide selected event!!!
       if(ev_section == s_section) next;
+      # extract data, start and end times
       ev_data = data_var[data_var$section == ev_section,]
       ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
       ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
+      # skip if they are not defined
       if (length(ev_start) == 0 || is.na(ev_start) ||
           length(ev_end)   == 0 || is.na(ev_end)) {
         next
       }
+      # add the event to shaded if intersects with the current
       if( !( ev_end <= sid_start || ev_start >= sid_end)) {
         shaded_events <<- append(shaded_events, ev_section)
       }
     }
   }
-  cat("shaded_events = ", shaded_events,"\n")
+  if(debug_print) {
+    cat("shaded_events = ", shaded_events,"\n")
+  }
 }
 
 # Define UI for application that draws a histogram
