@@ -28,15 +28,44 @@ empty_table =         data.frame(
   content = "No events"
 )
 
+# global variable to turn on/off the debug console print
+debug_print = FALSE
 
+# Information about all JSM events
+#   scrapped by ../JSM_program.Rmd code from JSM2025 site
+#       id (int): section number
+#       time (string): time of the event in "<start> - <end> format"
+#       title (string): title of the event
+#       type (string): type of the event
+#       day  (string): day (like "Friday, August 1, 2025")
 DF <- read.csv("time_table.csv")
-df_section <- load_section_info(1057)
-DF_sections <- data.frame()
+
+# list of the conference days
 days <- DF %>% pull(day) %>% unique
+
+# list of the conference types
 types <- DF %>% pull(type) %>% unique
+
+# data.frame with detailed information about each of the events (sections)
+#  for each event a list of talks is stores, one row for talk
+#   is collected automatically by web scrapping of the JSM site on the right click of the corresponding event
+#       section (int): section number (could repeat)
+#       root (string): room (could repeat)
+#       title (string): title of the talk
+#       speakers (string): comma-separated list of the authors of the talk
+DF_sections <- data.frame()
+
+# data.frame with detailed information about one event
+#   used to display event-details dialog
+#   format is the same as DF_sections
+df_section <- load_section_info(1057)
+
+# list of all shaded events
+#   updated automatically on each refresh
+#   see update_shaded() function
 shaded_events <- c()
 
-
+# returns html style for each event type
 get_event_style <- function(event_type) {
   style_map <- list(
     "Invited Paper Session " = "background-color: #d62728; color: white; font-weight: bold;",
@@ -62,59 +91,51 @@ get_event_style <- function(event_type) {
   unname(style_map[event_type] %||% "background-color: #dddddd; color: black;")
 }
 
+# converts event style into suitable format
+#   TODO: join these two functions
 get_event_style_string <- function(type) {
   paste0("<span style=\"", get_event_style(type)[[1]], "\">", type, "</span>")
 }
 
-parse_date_string <- function(raw_start) {
-  # Step 1: Remove weekday name
-  # This removes everything before the first comma and the comma itself
-  cleaned <- str_trim(str_remove(raw_start, "^[^,]+,\\s*"))  
-  # cleaned is now: "August 4, 2025 , 7:00 AM"
-  
-  # Step 2: Remove any extra commas
-  cleaned <- str_replace_all(cleaned, ",", "")  
-  # cleaned is now: "August 4 2025 7:00 AM"
-  
-  # Step 3: Parse using mdy_hm (month-day-year hour-minute) or mdy_hms if seconds included
-  parsed_date <- mdy_hm(cleaned)
-  return(parsed_date)
-}
-
+# converts day and time of the event into standard format
 to_POSIX_date <- function(day, time) as.POSIXct(paste(day, time), format = "%A, %B %d, %Y %I:%M %p") 
 
-writeClipboard <- function(v) {
-  clip <- pipe("pbcopy", "w")
-  writeLines(paste(v), clip)
-  close(clip)
-}
 
 update_shaded <- function(sel_sections, data_var) {
   shaded_events <<- c()
-  # selected_ids <- data_var[data_var$section %in% selected_sections(), ]$id
+  # for each selected section
   for(s_section in sel_sections) {
+    # extract data, start and end times
     sid_data <- data_var[data_var$section == s_section,]
     sid_start <- to_POSIX_date(sid_data$day, sid_data$start)
     sid_end <- to_POSIX_date(sid_data$day, sid_data$end)
+    # skip if they are not defined
     if (length(sid_start) == 0 || is.na(sid_start) ||
         length(sid_end)   == 0 || is.na(sid_end)) {
       next
     }
+    # for each event in the current view
     for(ev_section in data_var$section) {
+      # do not hide selected event!!!
       if(ev_section == s_section) next;
+      # extract data, start and end times
       ev_data = data_var[data_var$section == ev_section,]
       ev_start <- to_POSIX_date(ev_data$day, ev_data$start)
       ev_end <- to_POSIX_date(ev_data$day, ev_data$end)
+      # skip if they are not defined
       if (length(ev_start) == 0 || is.na(ev_start) ||
           length(ev_end)   == 0 || is.na(ev_end)) {
         next
       }
+      # add the event to shaded if intersects with the current
       if( !( ev_end <= sid_start || ev_start >= sid_end)) {
         shaded_events <<- append(shaded_events, ev_section)
       }
     }
   }
-  cat("shaded_events = ", shaded_events,"\n")
+  if(debug_print) {
+    cat("shaded_events = ", shaded_events,"\n")
+  }
 }
 
 # Define UI for application that draws a histogram
@@ -128,6 +149,7 @@ ui <- fluidPage(
       }
     ")),
       
+      # JS functions to catch mouse events
       tags$script(HTML("
       Shiny.addCustomMessageHandler('bindDoubleClick', function(id) {
         const el = document.getElementById(id);
@@ -148,6 +170,7 @@ ui <- fluidPage(
       });
     ")),
       
+      # style
       tags$style(HTML("
     .vis-timeline {
       font-size: 15px;
@@ -156,7 +179,10 @@ ui <- fluidPage(
   ), # eng of tags$head
 
     # Application title
-    # titlePanel("Old Faithful Geyser Data"),
+    titlePanel("JSM 2025 Schedule"),
+    tags$p(" Click ", 
+           tags$a(href="https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0", "this link"),
+           " to open the site"),
     fluidRow(
       column(1, actionBttn("reset_btn", "Reset")),
       column(1),
@@ -208,38 +234,55 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+  
+  # all section titles will be wraped by this number
+  #   controlled by wrap_width slider
   wrap_width <- reactiveVal(30) # Initial wrap width
   # wrap_width = 30
   observeEvent(input$wrap_width, {
     wrap_width(input$wrap_width)
   })
   
+  # list of the days to show
+  #   controlled by the dropbox
   selected_day = reactiveVal( days[4])
   observeEvent(input$selected_day, {
     cat(input$selected_day)
     selected_day(input$selected_day)
   })
   
-  selected_sections <- reactiveVal( c())
-  redraw_trigger <- reactiveVal(0)  # Force UI re-render
-  
-
+  # list of the selected event types
+  #   controlled by the dropbox
   event_select = reactiveVal(types)
   observeEvent(input$event_select,{
     cat(input$event_select,"\n")
     event_select(input$event_select)
   })
   
+  # listed of the selected sections
+  #   is updated on the double click
+  selected_sections <- reactiveVal( c())
+  
+  # string to filrer the sections' titles or numbers
+  #   controlled by the input field
   title_search_pattern = reactiveVal("fun")
   observeEvent(input$title_search_pattern, {
     cat(input$title_search_pattern)
     title_search_pattern(input$title_search_pattern)
   })
 
-  # redraw function
+  # active value to force redraw of the timetable vizual
+  #   used throught the code
+  redraw_trigger <- reactiveVal(0)  # Force UI re-render
+  
+
+  # reactive variable that store data.frame with filtered out rows and formatted fields
   data <- reactive({
-    cat("DF_sections")
-    str(DF_sections)
+    if(debug_print) {
+      cat("DF_sections")
+      str(DF_sections)
+    }
+    # Filter out day, event type, pattern string
     data_ <<- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
@@ -248,34 +291,39 @@ server <- function(input, output, session) {
       return( data_)
     }
     selected_ids <- data_[data_$id %in% selected_sections(),]$id
-    cat("selected_ids = ", selected_ids, "\n")
+    if(debug_print) {
+      cat("selected_ids = ", selected_ids, "\n")
+    }
+    # splitting time field and creating popup message
     data_var <- data_  %>% 
       separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
       mutate(section = id, popup = paste0(title, "|", type, "| section: ", id))
+    # searching for number of presentors in the event
     data_var$n_presenters <- sapply(data_var$id, function(i) sum(DF_sections$section == i))
+    # updating popup, capitalizing selected, wrapping the title, removing unnecessary fields
     data_var <- data_var %>% 
       mutate(popup = paste0(popup, " # = ", n_presenters)) %>% 
       transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
       mutate(title = ifelse(section %in% selected_ids, toupper(title), title)) %>% 
       mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
-    
-    # print("data(): data_var")
-    # print(data_var)
     return(data_var)
   })
   
+  # reactive variable with final data.frame in TimeViz format
   tv_data <- reactive({
+    # updating show flags
     show_shadowed <- is.null(input$show_options) || ("Shadowed" %in% input$show_options)
     show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
     show_nonselected <- is.null(input$show_options) || ("Not Selected" %in% input$show_options)
+    # get current version of the data
     data_var  <- data()
-    # print("tv_data: data_var")
-    # print(data_var)
+    # check for empty
     if(nrow(data_var) == 0) {
       cat("Empty data table\n")
       return(empty_table)
     } else {
       update_shaded( selected_sections(), data_var )
+      # do not show events that we do not want to see
       if(! show_shadowed) {
         data_var <- data_var[!(data_var$section %in% shaded_events), ]
       }        
@@ -284,8 +332,10 @@ server <- function(input, output, session) {
       }        
       if(! show_nonselected) {
         data_var <- data_var[data_var$section %in% selected_sections(), ]
-      }        
+      }
+      # get IDs of shaded events from session numbers
       shaded_ids <- data_var[data_var$section %in% shaded_events, ]$id
+      # transfer data to TimeViz format and shade shaded events
       final_data <- data.frame(
         id = data_var$id, 
         start = format(as.POSIXct(paste(data_var$day, data_var$start), format = "%A, %B %d, %Y %I:%M %p"), "%Y-%m-%dT%H:%M:%S"),
@@ -296,16 +346,19 @@ server <- function(input, output, session) {
       ) %>% mutate(
         style = ifelse(id %in% shaded_ids, "background-color: #f0f0f0; color: #888888;", style)
       )
-      # print("tv_data: shaded_events")
-      # print(shaded_events)
-      print("End of tv_data")
-        
+      if(debug_print) {
+        print("tv_data: shaded_events")
+        print(shaded_events)
+        print("End of tv_data")
+      }
       return(final_data)
     }
   })
 
   
-
+  #=============================================
+  #=== Updating on redraw trigger and bind back all mouse events
+  #=============================================
   output$timeline_ui <- renderUI({
     redraw_trigger()  # trigger timevis redraw when updated
     tagList(
@@ -336,25 +389,39 @@ server <- function(input, output, session) {
     session$sendCustomMessage("bindDoubleClick", "timeline")
   })
   
-  modal_table <- reactiveVal(
-    df_section
-  )
   
+  
+  #=============================================
+  #=== current event detaild for model dialog
+  #=============================================
+  modal_table <- reactiveVal(df_section)
   output$datatable_modal <- DT::renderDataTable({
     modal_table()
   })
   
+  
+  
+  #=============================================
+  #=== mouse rightclick handler
+  #=============================================
   observeEvent(input$timeline_rightclick, {
     data_var <- data()
-    cat("right click\n")
+    if(debug_print) {
+      cat("right click\n")
+    }
+    # getting the ID
     clicked_id <- input$timeline_rightclick$item
-    cat("item ", clicked_id, " is clicked\n")
+    if(debug_print) {
+      cat("item ", clicked_id, " is clicked\n")
+    }
+    # if event is clicked
     if (!is.null(clicked_id)) {
+      # get section number
       clicked_section <- data_var[data_var$id == clicked_id,]$section
+      # download on scrao section details and update rective variable
       df_section = load_section_info(clicked_section)
       modal_table(df_section)
-      DF_sections <<- bind_rows(DF_sections, df_section) %>% unique
-      cat("[DF_sections] = ", nrow(DF_sections), "\n")
+      # Show the event details dialig box
       if(nrow(df_section)>0) {
         showModal(modalDialog(
           title = "Event Info",
@@ -368,32 +435,45 @@ server <- function(input, output, session) {
     }
   })
   
+  # left click handler
+  #   add or remove clicked event from the selected
   observeEvent(input$timeline_doubleclick, {
     clicked_id <- input$timeline_doubleclick$item
-    cat("item ", clicked_id, " is clicked\n")
     data_var <- data()
-    cat("data_var$id[1] = ", data_var$id[1],"\n")
+    if(debug_print) {
+      cat("item ", clicked_id, " is clicked\n")
+      cat("data_var$id[1] = ", data_var$id[1],"\n")
+    }
     if (!is.null(clicked_id)) {
+      # get session number and ignire if shaded or null
       clicked_section <- data_var[data_var$id == clicked_id,]$section
+      if(debug_print) {
+        cat("clicked_section = ", clicked_section, "\n")
+      }
+      if(is.null(clicked_section)) return();
       if(clicked_section %in% shaded_events) {
         return()
       }
-      cat("clicked_section = ", clicked_section, "\n")
       
-      if(is.null(clicked_section)) return();
+      # add to selected if not in
       if (!(clicked_section %in% selected_sections())) {
         selected_sections( c(selected_sections(), clicked_section))
-        cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        if(debug_print) {
+          cat("Adding section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        }
+      # or remove from selected if is in
       } else {
         selected_sections( selected_sections()[selected_sections() != clicked_section])
-        cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        if(debug_print) {
+          cat("Removing section ", clicked_section, " selected_sections=", selected_sections(),"\n")
+        }
       }
-      # updating shaded
-      # update_shaded( selected_sections(), data_var )
+      # need to redraw
       redraw_trigger(redraw_trigger() + 1)  # Force update
     }
   })
   
+  # print internal info on Info button
   observeEvent(input$info_btn,{
     cat("INFO: \n")
     str(data())
@@ -403,6 +483,7 @@ server <- function(input, output, session) {
     print(input$show_options)
   })
   
+  # resets all data on resets button
   observeEvent(input$reset_btn, {
     cat("Reset button clicked\n")
     shaded_events <<- c()
@@ -410,24 +491,32 @@ server <- function(input, output, session) {
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
   
+  # redraws time viz on redraw button
   observeEvent(input$redraw_btn, {
     cat("Redraw #", redraw_trigger(), "\n")
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
  
 
+  # save shedule to file on Download button
   output$save_submit <- downloadHandler(
     filename = function() {
       "schedule.txt"
     },
     content = function(file) {
       text <- ""
+      # for all selected sections
       s_sections <- selected_sections()
+      # put total number
       text <- paste(text, paste0(" You have ", length(s_sections), " selected sections"), sep = "\n")
+      # Scans through days
       days <- DF[DF$id %in% s_sections,]$day %>% unique
+      # and for each day
       for(d in days) {
-        df <- DF %>% filter(day == d) %>% filter(id %in% s_sections)
+        # prints it as a subtitle
         text <- paste(text, "\n=========", d, "=========", sep = "\n")
+        # and prints each event on separate line
+        df <- DF %>% filter(day == d) %>% filter(id %in% s_sections)
         for(i in 1:nrow(df)) {
           line <- paste0(df[i,]$time, ": section ", df[i,]$id," \"", df[i,]$title,"\" /", df[i,]$type, "/")
           text <- paste(text, line, sep="\n")
@@ -439,35 +528,32 @@ server <- function(input, output, session) {
   )
     
 
-  
-  observeEvent(input$load_btn, {
-    cat("Load button pushed\n")
-    showModal(modalDialog(
-      title = "Load Data",
-      tags$p("Paste comma-separates section numbers"),
-      textInput("loaded_sections", "Sections:"),
-      easyClose = TRUE,
-      footer = actionBttn("load_submit", "OK")
-    ))
-  })
-  
-
+  # Uploads schedule on uplod button
   observeEvent(input$upload_schedule, {
     req(input$upload_schedule)
+    # get file content
     text <- paste(readLines(input$upload_schedule$datapath, warn = FALSE), collapse = "\n")
-    cat("=== text ======\n")
-    cat(text, "\n")
+    if(debug_print) {
+      cat("=== text ======\n")
+      cat(text, "\n")
+    }
+    # select only 4-digit numbers
     numbers <- stringr::str_extract_all(text, "\\b\\d{4}\\b")[[1]]
-    cat("-- numbers --\n")
-    print(numbers)
+    if(debug_print) {
+      cat("-- numbers --\n")
+      print(numbers)
+    }
+    # these numbers are selected sections
     sects <- sapply(numbers, as.integer, USE.NAMES = FALSE)
-    cat("Submitted: ", sects, "\n")
+    if(debug_print) {
+      cat("Submitted: ", sects, "\n")
+    }
+    # store them, and redraw
     selected_sections(sects)
-    data_var <- data()
-    # update_shaded( selected_sections(), data_var )
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 
+  # view options dialig box
   observeEvent(input$options_btn, {
     cat("options_btn pushed")
     showModal(modalDialog(
