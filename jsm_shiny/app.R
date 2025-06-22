@@ -439,11 +439,11 @@ server <- function(input, output, session) {
   #   add or remove clicked event from the selected
   observeEvent(input$timeline_doubleclick, {
     clicked_id <- input$timeline_doubleclick$item
+    data_var <- data()
     if(debug_print) {
       cat("item ", clicked_id, " is clicked\n")
-      data_var <- data()
+      cat("data_var$id[1] = ", data_var$id[1],"\n")
     }
-    cat("data_var$id[1] = ", data_var$id[1],"\n")
     if (!is.null(clicked_id)) {
       # get session number and ignire if shaded or null
       clicked_section <- data_var[data_var$id == clicked_id,]$section
