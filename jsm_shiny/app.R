@@ -234,38 +234,55 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+  
+  # all section titles will be wraped by this number
+  #   controlled by wrap_width slider
   wrap_width <- reactiveVal(30) # Initial wrap width
   # wrap_width = 30
   observeEvent(input$wrap_width, {
     wrap_width(input$wrap_width)
   })
   
+  # list of the days to show
+  #   controlled by the dropbox
   selected_day = reactiveVal( days[4])
   observeEvent(input$selected_day, {
     cat(input$selected_day)
     selected_day(input$selected_day)
   })
   
-  selected_sections <- reactiveVal( c())
-  redraw_trigger <- reactiveVal(0)  # Force UI re-render
-  
-
+  # list of the selected event types
+  #   controlled by the dropbox
   event_select = reactiveVal(types)
   observeEvent(input$event_select,{
     cat(input$event_select,"\n")
     event_select(input$event_select)
   })
   
+  # listed of the selected sections
+  #   is updated on the double click
+  selected_sections <- reactiveVal( c())
+  
+  # string to filrer the sections' titles or numbers
+  #   controlled by the input field
   title_search_pattern = reactiveVal("fun")
   observeEvent(input$title_search_pattern, {
     cat(input$title_search_pattern)
     title_search_pattern(input$title_search_pattern)
   })
 
-  # redraw function
+  # active value to force redraw of the timetable vizual
+  #   used throught the code
+  redraw_trigger <- reactiveVal(0)  # Force UI re-render
+  
+
+  # reactive variable that store data.frame with filtered out rows and formatted fields
   data <- reactive({
-    cat("DF_sections")
-    str(DF_sections)
+    if(debug_print) {
+      cat("DF_sections")
+      str(DF_sections)
+    }
+    # Filter out day, event type, pattern string
     data_ <<- DF %>% 
       filter(day %in% selected_day()) %>% 
       filter(type %in% event_select()) %>% 
@@ -274,22 +291,25 @@ server <- function(input, output, session) {
       return( data_)
     }
     selected_ids <- data_[data_$id %in% selected_sections(),]$id
-    cat("selected_ids = ", selected_ids, "\n")
+    if(debug_print) {
+      cat("selected_ids = ", selected_ids, "\n")
+    }
+    # splitting time field and creating popup message
     data_var <- data_  %>% 
       separate_wider_delim(time, delim = " - ", names = c("start", "end")) %>% 
       mutate(section = id, popup = paste0(title, "|", type, "| section: ", id))
+    # searching for number of presentors in the event
     data_var$n_presenters <- sapply(data_var$id, function(i) sum(DF_sections$section == i))
+    # updating popup, capitalizing selected, wrapping the title, removing unnecessary fields
     data_var <- data_var %>% 
       mutate(popup = paste0(popup, " # = ", n_presenters)) %>% 
       transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
       mutate(title = ifelse(section %in% selected_ids, toupper(title), title)) %>% 
       mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
-    
-    # print("data(): data_var")
-    # print(data_var)
     return(data_var)
   })
   
+  # reactive variable with final data.frame in TimeViz format
   tv_data <- reactive({
     show_shadowed <- is.null(input$show_options) || ("Shadowed" %in% input$show_options)
     show_selected <- is.null(input$show_options) || ("Selected" %in% input$show_options)
