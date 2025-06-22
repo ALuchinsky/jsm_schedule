@@ -149,6 +149,7 @@ ui <- fluidPage(
       }
     ")),
       
+      # JS functions to catch mouse events
       tags$script(HTML("
       Shiny.addCustomMessageHandler('bindDoubleClick', function(id) {
         const el = document.getElementById(id);
@@ -169,6 +170,7 @@ ui <- fluidPage(
       });
     ")),
       
+      # style
       tags$style(HTML("
     .vis-timeline {
       font-size: 15px;
@@ -177,7 +179,10 @@ ui <- fluidPage(
   ), # eng of tags$head
 
     # Application title
-    # titlePanel("Old Faithful Geyser Data"),
+    titlePanel("JSM 2025 Schedule"),
+    tags$p(" Click ", 
+           tags$a(href="https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0", "this link"),
+           " to open the site"),
     fluidRow(
       column(1, actionBttn("reset_btn", "Reset")),
       column(1),
