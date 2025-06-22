@@ -553,6 +553,7 @@ server <- function(input, output, session) {
     redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 
+  # view options dialig box
   observeEvent(input$options_btn, {
     cat("options_btn pushed")
     showModal(modalDialog(
