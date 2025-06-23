@@ -203,7 +203,7 @@ ui <- fluidPage(
                inputId = "selected_day", 
                label = "Select a day", 
                choices = days, 
-               selected = days[1], 
+               selected = days[3], 
                multiple = TRUE,
                options = pickerOptions(
                  actionsBox = TRUE, liveSearch = TRUE
