@@ -2,6 +2,7 @@ backup/
 jsm_shiny/rsconnect/
 jsm_shiny/time_table.csv
 jsm_shiny/events/
+tutorial/
 .DS_Store
 test_shiny/
 README.html

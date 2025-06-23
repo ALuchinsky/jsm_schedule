@@ -144,7 +144,8 @@ update_shaded <- function(sel_sections, data_var) {
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-    tags$head(
+  introjsUI(),  # Loads required JS/CSS
+  tags$head(
       tags$style(HTML("
       html, body {
         overflow-y: scroll !important;
@@ -193,7 +194,10 @@ ui <- fluidPage(
            tags$a(href="https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0", "this link"),
            " to open the site"),
     fluidRow(
-      column(2, downloadBttn("save_submit", "Download")),
+      column(2, downloadBttn("save_submit", "Download") %>% tagAppendAttributes(
+        `data-intro` = "Press to save file",
+        `data-step` = 1
+      )),
       column(2, fileInput("upload_schedule", "Upload", accept = "txt")),
       column(1, actionBttn(
         inputId = "about_btn",
@@ -605,6 +609,11 @@ server <- function(input, output, session) {
   
   observeEvent(input$tutorial_btn, {
     cat("Tutorial is started")
+    introjs(session, options = list(
+      "nextLabel" = "Next",
+      "prevLabel" = "Back",
+      "doneLabel" = "Done"
+    ))
   })
   
   }
