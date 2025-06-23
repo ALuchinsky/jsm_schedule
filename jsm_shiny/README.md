@@ -1,3 +1,5 @@
+&copy; [Aleksei Luchinsky](http://alexey-luchinsky.com), 2025
+
 # Short Overview
 
 This [web application](https://al78.shinyapps.io/jsm_shiny/) will help you navigate the upcoming [JSM 2025 meeting](https://ww2.amstat.org/meetings/jsm/2025/). All information, obtained by scraping the official program [website](https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0), is presented in a neat graphical format. You can easily select and save events you're interested in attending, filter out other sessions, inspect the details of each session, and more.
