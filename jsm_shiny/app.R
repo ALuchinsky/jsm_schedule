@@ -505,7 +505,7 @@ server <- function(input, output, session) {
   # })
  
   observeEvent(input$about_btn,{
-    mdd <- 
+    mdd <- readLines("./README.md")
 "# This is me
  
  * one
@@ -517,7 +517,8 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "About",
       div(about_text),
-      footer = modalButton("OK")
+      footer = modalButton("OK"),
+      easyClose = TRUE
     ))
   })
 
