@@ -21,6 +21,8 @@ suppressPackageStartupMessages(library(rvest))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(commonmark))
 suppressPackageStartupMessages(library(htmltools))
+suppressPackageStartupMessages(library(rintrojs))
+
 source("./scrap_event_info.R")
 
 empty_table =         data.frame(
@@ -199,6 +201,11 @@ ui <- fluidPage(
         icon = icon("info-circle")	,  # Font Awesome 'cog' or 'gear' icon
         style = "simple",  # or "jelly", "simple", "gradient", etc.
         color = "primary"
+      )),
+      column(1, actionBttn(
+        inputId = "tutorial_btn",
+        label = "Start tutorial",
+        style = "simple", color = "primary"
       ))
     ),
     fluidRow(
@@ -594,6 +601,12 @@ server <- function(input, output, session) {
       footer = modalButton("Close")
     ))
   })
+  
+  
+  observeEvent(input$tutorial_btn, {
+    cat("Tutorial is started")
+  })
+  
   }
 
 # Run the application 
