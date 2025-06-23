@@ -6,6 +6,11 @@ This application was created using the R Shiny framework. All the code is availa
 
 # Page Layout
 
+<p align="center">
+<img src="./app_screenshot.png" width = "500"/>
+</p>
+
+
 The typical page layout is shown in the figure below. As you can see, it consists of several blocks:
 
 - **Control buttons**, including:
