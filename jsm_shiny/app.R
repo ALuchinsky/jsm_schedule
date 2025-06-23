@@ -31,7 +31,7 @@ empty_table =         data.frame(
 )
 
 # global variable to turn on/off the debug console print
-debug_print = FALSE
+debug_print = TRUE
 
 # Information about all JSM events
 #   scrapped by ../JSM_program.Rmd code from JSM2025 site
@@ -149,6 +149,11 @@ ui <- fluidPage(
         overflow-x: hidden !important;
         overscroll-behavior: contain;
       }
+     .vis-item .vis-item-content {
+        white-space: normal !important;
+        word-wrap: break-word;
+        max-width: 4000px;
+      }
     ")),
       
       # JS functions to catch mouse events
@@ -197,7 +202,6 @@ ui <- fluidPage(
       ))
     ),
     fluidRow(
-      column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
       column(4, 
              pickerInput(
                inputId = "selected_day", 
@@ -242,14 +246,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
-  # all section titles will be wraped by this number
-  #   controlled by wrap_width slider
-  wrap_width <- reactiveVal(30) # Initial wrap width
-  # wrap_width = 30
-  observeEvent(input$wrap_width, {
-    wrap_width(input$wrap_width)
-  })
-  
+
   # list of the days to show
   #   controlled by the dropbox
   selected_day = reactiveVal( days[4])
@@ -311,8 +308,9 @@ server <- function(input, output, session) {
     data_var <- data_var %>% 
       mutate(popup = paste0(popup, " # = ", n_presenters)) %>% 
       transmute(id = 1:nrow(.), day, start, end, title, type, popup, section) %>% 
-      mutate(title = ifelse(section %in% selected_ids, toupper(title), title)) %>% 
-      mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
+      mutate(title = ifelse(section %in% selected_ids, toupper(title), title))
+    # %>% 
+    #   mutate(title  = gsub("\\n", "<br>", str_wrap(title, width = wrap_width() ))) # Adjust width as needed
     return(data_var)
   })
   
@@ -356,6 +354,8 @@ server <- function(input, output, session) {
       if(debug_print) {
         print("tv_data: shaded_events")
         print(shaded_events)
+        print("final_data")
+        print(final_data)
         print("End of tv_data")
       }
       return(final_data)
@@ -378,7 +378,7 @@ server <- function(input, output, session) {
   
   output$timeline <- renderTimevis({
     print("renderTimeviz: tv_data()")
-    timevis(tv_data()) %>% onRender("
+    timevis(tv_data(), options = list(template = NULL)) %>% onRender("
       function(el, x) {
         document.getElementById(el.id).timeline = this.timeline;
         setTimeout(function() {
