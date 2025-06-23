@@ -19,6 +19,8 @@ suppressPackageStartupMessages(library(htmlwidgets))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(rvest))
 suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(commonmark))
+suppressPackageStartupMessages(library(htmltools))
 source("./scrap_event_info.R")
 
 empty_table =         data.frame(
@@ -502,6 +504,22 @@ server <- function(input, output, session) {
   #   redraw_trigger(redraw_trigger() + 1)  # Force update
   # })
  
+  observeEvent(input$about_btn,{
+    mdd <- 
+"# This is me
+ 
+ * one
+ * Two
+"
+    # Convert markdown to HTML
+    about_text <- HTML(commonmark::markdown_html(mdd))
+    
+    showModal(modalDialog(
+      title = "About",
+      div(about_text),
+      footer = modalButton("OK")
+    ))
+  })
 
   # save shedule to file on Download button
   output$save_submit <- downloadHandler(
