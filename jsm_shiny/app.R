@@ -19,6 +19,8 @@ suppressPackageStartupMessages(library(htmlwidgets))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(rvest))
 suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(commonmark))
+suppressPackageStartupMessages(library(htmltools))
 source("./scrap_event_info.R")
 
 empty_table =         data.frame(
@@ -184,17 +186,15 @@ ui <- fluidPage(
            tags$a(href="https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0", "this link"),
            " to open the site"),
     fluidRow(
-      column(1, actionBttn("reset_btn", "Reset")),
-      column(1),
-      column(1, actionBttn("info_btn", "Info")),
-      column(1),
-      column(1, actionBttn("redraw_btn", "Redraw")),
-      column(1),
-      column(1, downloadBttn("save_submit", "Download")),
-      column(1),
-      column(1, fileInput("upload_schedule", "Upload", accept = "txt")),
-      column(1),
-      column(1, actionBttn("options_btn", "Options"))
+      column(2, downloadBttn("save_submit", "Download")),
+      column(2, fileInput("upload_schedule", "Upload", accept = "txt")),
+      column(1, actionBttn(
+        inputId = "about_btn",
+        label = "About",  # or "Options" if you want a label
+        icon = icon("info-circle")	,  # Font Awesome 'cog' or 'gear' icon
+        style = "simple",  # or "jelly", "simple", "gradient", etc.
+        color = "primary"
+      ))
     ),
     fluidRow(
       column(4, sliderInput("wrap_width", "Wrap Width:", min = 10, max = 100, value = 30)), 
@@ -203,14 +203,21 @@ ui <- fluidPage(
                inputId = "selected_day", 
                label = "Select a day", 
                choices = days, 
-               selected = days[1], 
+               selected = days[3], 
                multiple = TRUE,
                options = pickerOptions(
                  actionsBox = TRUE, liveSearch = TRUE
                )
                )
              ),
-      column(4, textInput("title_search_pattern", "Filter:", ""))
+      column(3, textInput("title_search_pattern", "Filter:", "")),
+      column(1, actionBttn(
+        inputId = "options_btn",
+        label = NULL,  # or "Options" if you want a label
+        icon = icon("gear"),  # Font Awesome 'cog' or 'gear' icon
+        style = "material-circle",  # or "jelly", "simple", "gradient", etc.
+        color = "primary"
+      ))
     ), # end of first row,
 
     fluidRow(
@@ -473,30 +480,47 @@ server <- function(input, output, session) {
     }
   })
   
-  # print internal info on Info button
-  observeEvent(input$info_btn,{
-    cat("INFO: \n")
-    str(data())
-    cat(" shaded_events = ", shaded_events, "\n")
-    cat(" selected_sections=", selected_sections(), "\n")
-    cat("Selected options:", input$show_options, "\n")
-    print(input$show_options)
-  })
+  # # print internal info on Info button
+  # observeEvent(input$info_btn,{
+  #   cat("INFO: \n")
+  #   str(data())
+  #   cat(" shaded_events = ", shaded_events, "\n")
+  #   cat(" selected_sections=", selected_sections(), "\n")
+  #   cat("Selected options:", input$show_options, "\n")
+  #   print(input$show_options)
+  # })
   
-  # resets all data on resets button
-  observeEvent(input$reset_btn, {
-    cat("Reset button clicked\n")
-    shaded_events <<- c()
-    selected_sections(c())
-    redraw_trigger(redraw_trigger() + 1)  # Force update
-  })
+  # # resets all data on resets button
+  # observeEvent(input$reset_btn, {
+  #   cat("Reset button clicked\n")
+  #   shaded_events <<- c()
+  #   selected_sections(c())
+  #   redraw_trigger(redraw_trigger() + 1)  # Force update
+  # })
   
-  # redraws time viz on redraw button
-  observeEvent(input$redraw_btn, {
-    cat("Redraw #", redraw_trigger(), "\n")
-    redraw_trigger(redraw_trigger() + 1)  # Force update
-  })
+  # # redraws time viz on redraw button
+  # observeEvent(input$redraw_btn, {
+  #   cat("Redraw #", redraw_trigger(), "\n")
+  #   redraw_trigger(redraw_trigger() + 1)  # Force update
+  # })
  
+  observeEvent(input$about_btn,{
+    mdd <- readLines("./README.md")
+"# This is me
+ 
+ * one
+ * Two
+"
+    # Convert markdown to HTML
+    about_text <- HTML(commonmark::markdown_html(mdd))
+    
+    showModal(modalDialog(
+      title = "About",
+      div(about_text),
+      footer = modalButton("OK"),
+      easyClose = TRUE
+    ))
+  })
 
   # save shedule to file on Download button
   output$save_submit <- downloadHandler(
