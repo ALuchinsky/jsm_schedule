@@ -36,5 +36,22 @@ Using options from the Options dialog box you can decide whether to show any of 
 
 This list of your selected events can be saved to local file using the Download button. In this simple text file for each of the dates all you selected events will be listed, including such details as time, title, section number, room location etc. You can download this saved file back into web session to continue your work on the scheduling.
 
+# Typical Work Process
+
+The following order of schdule selection could be adopted:
+
+* Select one specific date of the conference and some event types you are interested in
+* You can also use the filter text box to do more specific search of the sessions
+* After inspecting the events select the ones you like most by double-clicking that
+* In the Options dialog box turn off display of the shadowed events to remove all time conflicts
+* Continue selecting more sessions at your wish (yous can coinsuder some other days, event types, etc)
+* Turn of display of the selected events to see if there are any other options for events that you can schedule without time conflict
+* Switch display only to selected events to observe you time schedule
+* Save the list of your seletced events to a text file
+
+Later you can download this text file back into the application, modify your choice, etc.
+
+
+
 
 
