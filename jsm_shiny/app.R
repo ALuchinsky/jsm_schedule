@@ -21,6 +21,8 @@ suppressPackageStartupMessages(library(rvest))
 suppressPackageStartupMessages(library(DT))
 suppressPackageStartupMessages(library(commonmark))
 suppressPackageStartupMessages(library(htmltools))
+suppressPackageStartupMessages(library(rintrojs))
+
 source("./scrap_event_info.R")
 
 empty_table =         data.frame(
@@ -142,7 +144,8 @@ update_shaded <- function(sel_sections, data_var) {
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-    tags$head(
+  introjsUI(),  # Loads required JS/CSS
+  tags$head(
       tags$style(HTML("
       html, body {
         overflow-y: scroll !important;
@@ -181,7 +184,17 @@ ui <- fluidPage(
       tags$style(HTML("
     .vis-timeline {
       font-size: 15px;
-    }"
+    }
+   .intro-orphan {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      height: 1px;
+      width: 1px;
+      overflow: hidden;
+      z-index: -1;
+    }
+  "
     ))
   ), # eng of tags$head
 
@@ -191,14 +204,25 @@ ui <- fluidPage(
            tags$a(href="https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0", "this link"),
            " to open the site"),
     fluidRow(
-      column(2, downloadBttn("save_submit", "Download")),
-      column(2, fileInput("upload_schedule", "Upload", accept = "txt")),
+      column(2, downloadBttn("save_submit", "Download") %>% tagAppendAttributes(
+        `data-intro` = "Press download button to save file",
+        `data-step` = 6
+      )),
+      column(2, fileInput("upload_schedule", "Upload", accept = "txt") %>% tagAppendAttributes(
+        `data-intro` = "Press Upload button to load saved file and continue your work",
+        `data-step` = 7
+      )),
       column(1, actionBttn(
         inputId = "about_btn",
         label = "About",  # or "Options" if you want a label
         icon = icon("info-circle")	,  # Font Awesome 'cog' or 'gear' icon
         style = "simple",  # or "jelly", "simple", "gradient", etc.
         color = "primary"
+      )),
+      column(1, actionBttn(
+        inputId = "tutorial_btn",
+        label = "Start tutorial",
+        style = "simple", color = "primary"
       ))
     ),
     fluidRow(
@@ -212,20 +236,32 @@ ui <- fluidPage(
                options = pickerOptions(
                  actionsBox = TRUE, liveSearch = TRUE
                )
+               )  %>% tagAppendAttributes(
+                 `data-intro` = "Select a date",
+                 `data-step` = 1
                )
              ),
-      column(3, textInput("title_search_pattern", "Filter:", "")),
+      column(3, textInput("title_search_pattern", "Filter:", "") %>% tagAppendAttributes(
+        `data-intro` = "type a text to filter title or section number",
+        `data-step` = 2
+      )),
       column(1, actionBttn(
         inputId = "options_btn",
         label = NULL,  # or "Options" if you want a label
         icon = icon("gear"),  # Font Awesome 'cog' or 'gear' icon
         style = "material-circle",  # or "jelly", "simple", "gradient", etc.
         color = "primary"
+      ) %>% tagAppendAttributes(
+        `data-intro` = "Use options to show/hide shaded, selected, unselected events",
+        `data-step` = 4
       ))
     ), # end of first row,
 
     fluidRow(
-      column(10, uiOutput("timeline_ui")), 
+      column(10, uiOutput("timeline_ui") %>% tagAppendAttributes(
+        `data-intro` = "Right click an event to see details or double click to select/unselect it",
+        `data-step` = 3
+        )), 
       column(1, checkboxGroupButtons(
         inputId = "event_select",
         label = "Select event types:",
@@ -237,11 +273,17 @@ ui <- fluidPage(
         width = "100%",
         checkIcon = list(yes = icon("check")),
         individual = TRUE
+      ) %>% tagAppendAttributes(
+        `data-intro` = "Filter event types here",
+        `data-step` = 5
       ))
-    ) # end of 2nd row
-
-    # Sidebar with a slider input for number of bins 
-) # end of ui fluid page
+    ), # end of 2nd row
+  tags$div(
+    id = "orphan_step",
+    class = "intro-orphan",
+    `data-intro` = "Thank you very much for watching this tutorial. You are welcome to return here when you need it.",
+    `data-step` = 8
+  )) # end of ui fluid page
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
@@ -594,6 +636,17 @@ server <- function(input, output, session) {
       footer = modalButton("Close")
     ))
   })
+  
+  
+  observeEvent(input$tutorial_btn, {
+    cat("Tutorial is started")
+    introjs(session, options = list(
+      "nextLabel" = "Next",
+      "prevLabel" = "Back",
+      "doneLabel" = "Done"
+    ))
+  })
+  
   }
 
 # Run the application 
