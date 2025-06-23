@@ -1,0 +1,3 @@
+This web application will help you to orient yourself in the upcoming [JSP 2005 meeting](https://ww2.amstat.org/meetings/jsm/2025/). All information obtained by scrapping the official program [website](https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0) is presented in a nive gpraphical way. Yuo can also easily select and save you are interested in and plan to visit, filer out some other events, inspect the details of each of the sessions, etc.
+
+This application was created using R Shiny service. All the code is avialably on the [GitHub page](https://github.com/ALuchinsky/jsm_schedule).
