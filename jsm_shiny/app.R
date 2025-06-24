@@ -219,7 +219,7 @@ ui <- fluidPage(
         style = "simple",  # or "jelly", "simple", "gradient", etc.
         color = "primary"
       )),
-      column(1, actionBttn(
+      column(2, actionBttn(
         inputId = "tutorial_btn",
         label = "Start tutorial",
         style = "simple", color = "primary"
