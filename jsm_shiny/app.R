@@ -178,6 +178,11 @@ ui <- fluidPage(
             props.event.preventDefault(); // prevent default browser menu
         });
       });
+      
+      // JavaScript to trigger file input click when action button is pressed
+      Shiny.addCustomMessageHandler('triggerUpload', function(message) {
+        document.getElementById('file_hidden').click();
+      });
     ")),
       
       # style
@@ -208,7 +213,14 @@ ui <- fluidPage(
         `data-intro` = "Press download button to save file",
         `data-step` = 6
       )),
-      column(2, fileInput("upload_schedule", "Upload", accept = "txt") %>% tagAppendAttributes(
+      column(2, 
+             # fileInput("upload_schedule", "Upload", accept = "txt") %>% 
+             actionBttn(inputId = "upload_btn", 
+                        label = "Upload",
+                        icon = icon("upload"),
+                        style = "simple",
+                        color = "primary") %>% 
+               tagAppendAttributes(
         `data-intro` = "Press Upload button to load saved file and continue your work",
         `data-step` = 7
       )),
@@ -283,7 +295,11 @@ ui <- fluidPage(
     class = "intro-orphan",
     `data-intro` = "Thank you very much for watching this tutorial. You are welcome to return here when you need it.",
     `data-step` = 8
-  )) # end of ui fluid page
+  ),
+  tags$input(
+    id = "file_hidden", type = "file", style = "display: none;"
+  )
+  ) # end of ui fluid page
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
@@ -595,28 +611,34 @@ server <- function(input, output, session) {
     
 
   # Uploads schedule on uplod button
-  observeEvent(input$upload_schedule, {
-    req(input$upload_schedule)
-    # get file content
-    text <- paste(readLines(input$upload_schedule$datapath, warn = FALSE), collapse = "\n")
-    if(debug_print) {
-      cat("=== text ======\n")
-      cat(text, "\n")
+  observeEvent(input$upload_btn, {
+    session$sendCustomMessage("triggerUpload", list())
+  })
+  
+  observe({
+    input$file_hidden  # Reactively watch for file input
+    
+    if (!is.null(input$file_hidden)) {
+      str(input$file_hidden)
+      text <- paste(readLines(input$file_hidden$datapath, warn = FALSE), collapse = "\n")
+      if(debug_print) {
+        cat("=== text ======\n")
+        cat(text, "\n")
+      }
+      # select only 4-digit numbers
+      numbers <- stringr::str_extract_all(text, "\\b\\d{4}\\b")[[1]]
+      if(debug_print) {
+        cat("-- numbers --\n")
+        print(numbers)
+      }
+      # these numbers are selected sections
+      sects <- sapply(numbers, as.integer, USE.NAMES = FALSE)
+      if(debug_print) {
+        cat("Submitted: ", sects, "\n")
+      }
+      # store them, and redraw
+      selected_sections(sects)
     }
-    # select only 4-digit numbers
-    numbers <- stringr::str_extract_all(text, "\\b\\d{4}\\b")[[1]]
-    if(debug_print) {
-      cat("-- numbers --\n")
-      print(numbers)
-    }
-    # these numbers are selected sections
-    sects <- sapply(numbers, as.integer, USE.NAMES = FALSE)
-    if(debug_print) {
-      cat("Submitted: ", sects, "\n")
-    }
-    # store them, and redraw
-    selected_sections(sects)
-    redraw_trigger(redraw_trigger() + 1)  # Force update
   })
 
   # view options dialig box
