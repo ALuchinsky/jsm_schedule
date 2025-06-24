@@ -563,7 +563,7 @@ server <- function(input, output, session) {
   # })
  
   observeEvent(input$about_btn,{
-    mdd <- readLines("./README.md")
+    mdd <- readLines("./readme_text.md")
 "# This is me
  
  * one

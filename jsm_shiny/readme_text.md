@@ -1,5 +1,3 @@
-&copy; [Aleksei Luchinsky](http://alexey-luchinsky.com), 2025
-
 # Short Overview
 
 This [web application](https://al78.shinyapps.io/jsm_shiny/) will help you navigate the upcoming [JSM 2025 meeting](https://ww2.amstat.org/meetings/jsm/2025/). All information, obtained by scraping the official program [website](https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0), is presented in a neat graphical format. You can easily select and save events you're interested in attending, filter out other sessions, inspect the details of each session, and more.
@@ -8,20 +6,19 @@ This application was created using the R Shiny framework. All the code is availa
 
 # Page Layout
 
-The typical page layout is shown in the figure below. As you can see, it consists of several blocks:
+
+The typical page layout consists of several blocks:
 
 - **Control buttons**, including:
-  - **Reset** – Resets the application state completely.
-  - **Info** – Prints some internal information to the R console. This button is for debugging purposes only and is not intended for online use.
-  - **Redraw** – Redraws the main Time Schedule region.
   - **Download** – Allows you to download a text file containing selected events.
   - **Upload** – Allows you to upload a saved file to continue your scheduling later.
-  - **Options** – Helps you choose which types of events are visible.
+  - **About** - Display information about the application (almost this text).
+  - **Start tutorial** - Shown a short interactive tutorial about the application
 
 - **Option controls**, including:
-  - **Wrap width** slider – Allows you to adjust the wrap length of the event cards.
   - **Active day selector** – Lets you choose which days to display. Note: it's possible to display several days (even all of them), but the timetable visualization may appear cluttered.
   - **Text filter input box** – Lets you filter events by title or session number.
+  - **Options** – Helps you choose which types of events are visible.
 
 - **Time Table pane** – The main part of the application. All filtered events are displayed here. More details are provided below.
 

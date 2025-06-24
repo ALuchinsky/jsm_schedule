@@ -14,17 +14,15 @@ This application was created using the R Shiny framework. All the code is availa
 The typical page layout is shown in the figure below. As you can see, it consists of several blocks:
 
 - **Control buttons**, including:
-  - **Reset** – Resets the application state completely.
-  - **Info** – Prints some internal information to the R console. This button is for debugging purposes only and is not intended for online use.
-  - **Redraw** – Redraws the main Time Schedule region.
   - **Download** – Allows you to download a text file containing selected events.
   - **Upload** – Allows you to upload a saved file to continue your scheduling later.
-  - **Options** – Helps you choose which types of events are visible.
+  - **About** - Display information about the application (almost this text).
+  - **Start tutorial** - Shown a short interactive tutorial about the application
 
 - **Option controls**, including:
-  - **Wrap width** slider – Allows you to adjust the wrap length of the event cards.
   - **Active day selector** – Lets you choose which days to display. Note: it's possible to display several days (even all of them), but the timetable visualization may appear cluttered.
   - **Text filter input box** – Lets you filter events by title or session number.
+  - **Options** – Helps you choose which types of events are visible.
 
 - **Time Table pane** – The main part of the application. All filtered events are displayed here. More details are provided below.
 
