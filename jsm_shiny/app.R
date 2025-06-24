@@ -209,7 +209,7 @@ ui <- fluidPage(
            tags$a(href="https://ww3.aievolution.com/JSMAnnual2025/Events/pubSearchOptions?style=0", "this link"),
            " to open the site"),
     fluidRow(
-      column(2, downloadBttn("save_submit", "Download") %>% tagAppendAttributes(
+      column(2, downloadBttn("save_submit", "Download", style = "simple", color = "primary") %>% tagAppendAttributes(
         `data-intro` = "Press download button to save file",
         `data-step` = 6
       )),
